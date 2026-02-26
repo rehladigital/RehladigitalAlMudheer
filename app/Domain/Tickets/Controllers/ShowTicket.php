@@ -7,6 +7,7 @@ use Illuminate\Contracts\Container\BindingResolutionException;
 use Leantime\Core\Controller\Controller;
 use Leantime\Core\Controller\Frontcontroller;
 use Leantime\Core\Support\FromFormat;
+use Leantime\Domain\Auth\Models\Roles;
 use Leantime\Domain\Comments\Services\Comments as CommentService;
 use Leantime\Domain\Files\Services\Files as FileService;
 use Leantime\Domain\Projects\Services\Projects as ProjectService;
@@ -70,11 +71,10 @@ class ShowTicket extends Controller
             return $this->tpl->display('errors.error500', responseCode: 500);
         }
 
-        // Ensure this ticket belongs to the current project
+        // For cross-project views (e.g., My Kanban), keep modal rendering in the same request.
+        // We still sync the session project, but we avoid redirecting from inside modal requests.
         if (session('currentProject') != $ticket->projectId) {
             $this->projectService->changeCurrentSessionProject($ticket->projectId);
-
-            return Frontcontroller::redirect(BASE_URL.'/tickets/showTicket/'.$id);
         }
 
         // Delete file
@@ -108,8 +108,8 @@ class ShowTicket extends Controller
         }
 
         $this->tpl->assign('ticket', $ticket);
-        $this->tpl->assign('ticketParents', $this->ticketService->getAllPossibleParents($ticket));
-        $this->tpl->assign('statusLabels', $this->ticketService->getStatusLabels());
+        $this->tpl->assign('ticketParents', $this->ticketService->getAllPossibleParents($ticket, (string) $ticket->projectId));
+        $this->tpl->assign('statusLabels', $this->ticketService->getStatusLabels($ticket->projectId));
         $this->tpl->assign('ticketTypes', $this->ticketService->getTicketTypes());
         $this->tpl->assign('ticketTypeIcons', $this->ticketService->getTypeIcons());
         $this->tpl->assign('efforts', $this->ticketService->getEffortLabels());
@@ -118,17 +118,39 @@ class ShowTicket extends Controller
         $allProjectMilestones = $this->ticketService->getAllMilestones([
             'sprint' => '',
             'type' => 'milestone',
-            'currentProject' => session('currentProject'),
+            'currentProject' => $ticket->projectId,
         ]);
         $this->tpl->assign('milestones', $allProjectMilestones);
-        $this->tpl->assign('sprints', $this->sprintService->getAllSprints(session('currentProject')));
+        $this->tpl->assign('sprints', $this->sprintService->getAllSprints($ticket->projectId));
 
-        $this->tpl->assign('kind', $this->timesheetService->getLoggableHourTypes());
-        $this->tpl->assign('ticketHours', $this->timesheetService->getLoggedHoursForTicketByDate($id));
-        $this->tpl->assign('userHours', $this->timesheetService->getUsersTicketHours($id, session('userdata.id')));
-
-        $this->tpl->assign('timesheetsAllHours', $this->timesheetService->getSumLoggedHoursForTicket($id));
-        $this->tpl->assign('remainingHours', $this->timesheetService->getRemainingHours($ticket));
+        $isOwner = session('userdata.role') === Roles::$owner;
+        if ($isOwner) {
+            $this->tpl->assign('kind', $this->timesheetService->getLoggableHourTypes());
+            $this->tpl->assign('ticketHours', $this->timesheetService->getLoggedHoursForTicketByDate($id));
+            $this->tpl->assign('userHours', $this->timesheetService->getUsersTicketHours($id, session('userdata.id')));
+            $this->tpl->assign('timesheetsAllHours', $this->timesheetService->getSumLoggedHoursForTicket($id));
+            $this->tpl->assign('remainingHours', $this->timesheetService->getRemainingHours($ticket));
+            $this->tpl->assign('onTheClock', $this->timesheetService->isClocked(session('userdata.id')));
+            $this->tpl->assign('timesheetValues', [
+                'kind' => '',
+                'date' => Carbon::now(session('usersettings.timezone'))->setTimezone('UTC'),
+                'hours' => '',
+                'description' => '',
+            ]);
+        } else {
+            $this->tpl->assign('kind', []);
+            $this->tpl->assign('ticketHours', []);
+            $this->tpl->assign('userHours', 0);
+            $this->tpl->assign('timesheetsAllHours', 0);
+            $this->tpl->assign('remainingHours', 0);
+            $this->tpl->assign('onTheClock', false);
+            $this->tpl->assign('timesheetValues', [
+                'kind' => '',
+                'date' => dtHelper()->dbNow(),
+                'hours' => '',
+                'description' => '',
+            ]);
+        }
 
         $this->tpl->assign('userInfo', $this->userService->getUser(session('userdata.id')));
         $this->tpl->assign('users', $this->projectService->getUsersAssignedToProject($ticket->projectId));
@@ -144,15 +166,6 @@ class ShowTicket extends Controller
         $files = $this->fileService->getFilesByModule('ticket', $id);
         $this->tpl->assign('numFiles', count($files));
         $this->tpl->assign('files', $files);
-
-        $this->tpl->assign('onTheClock', $this->timesheetService->isClocked(session('userdata.id')));
-
-        $this->tpl->assign('timesheetValues', [
-            'kind' => '',
-            'date' => Carbon::now(session('usersettings.timezone'))->setTimezone('UTC'),
-            'hours' => '',
-            'description' => '',
-        ]);
 
         // TODO: Refactor thumbnail generation in file manager
         $this->tpl->assign('imgExtensions', ['jpg', 'jpeg', 'png', 'gif', 'psd', 'bmp', 'tif', 'thm', 'yuv']);

@@ -42,6 +42,10 @@ class ShowKanban extends Controller
      */
     public function get(array $params): Response
     {
+        if (isset($params['users']) && $params['users'] === 'me') {
+            $params['users'] = (string) session('userdata.id');
+        }
+
         // Status groupBy is redundant on Kanban (status already shown as columns)
         // Auto-reset to "all" (no grouping) for cleaner default view
         if (isset($params['groupBy']) && $params['groupBy'] === 'status') {

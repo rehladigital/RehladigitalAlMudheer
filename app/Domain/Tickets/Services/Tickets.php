@@ -2762,11 +2762,30 @@ class Tickets
      */
     public function getTicketTemplateAssignments($params): array
     {
-
-        $currentSprint = $this->sprintService->getCurrentSprintId((int) session('currentProject'));
-
         $searchCriteria = $this->prepareTicketSearchArray($params);
         $searchCriteria['orderBy'] = 'kanbansort';
+
+        $activeProjectId = $searchCriteria['currentProject'] ?? session('currentProject') ?? '';
+        $currentSprint = '';
+        $sprints = [];
+        $futureSprints = [];
+        $users = [];
+        $milestones = [];
+
+        // Cross-project Kanban views can intentionally omit currentProject.
+        // In that case, skip project-scoped lookups to avoid runtime errors.
+        if ($activeProjectId !== '' && $activeProjectId !== null) {
+            $projectId = (int) $activeProjectId;
+            $currentSprint = $this->sprintService->getCurrentSprintId($projectId);
+            $sprints = $this->sprintService->getAllSprints($projectId);
+            $futureSprints = $this->sprintService->getAllFutureSprints($projectId);
+            $users = $this->projectService->getUsersAssignedToProject($projectId);
+            $milestones = $this->getAllMilestones([
+                'sprint' => '',
+                'type' => 'milestone',
+                'currentProject' => $projectId,
+            ]);
+        }
 
         $allTickets = $this->getAllGrouped($searchCriteria);
         $allTicketStates = $this->getStatusLabels();
@@ -2783,17 +2802,6 @@ class Tickets
         $numOfFilters = $this->countSetFilters($searchCriteria);
 
         $onTheClock = $this->timesheetService->isClocked(session('userdata.id'));
-
-        $sprints = $this->sprintService->getAllSprints(session('currentProject'));
-        $futureSprints = $this->sprintService->getAllFutureSprints((int) session('currentProject'));
-
-        $users = $this->projectService->getUsersAssignedToProject(session('currentProject'));
-
-        $milestones = $this->getAllMilestones([
-            'sprint' => '',
-            'type' => 'milestone',
-            'currentProject' => session('currentProject'),
-        ]);
 
         $groupByOptions = $this->getGroupByFieldOptions();
         $newField = $this->getNewFieldOptions();

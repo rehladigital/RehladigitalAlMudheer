@@ -6,6 +6,8 @@ foreach ($__data as $var => $val) {
 $ticket = $tpl->get('ticket');
 $projectData = $tpl->get('projectData');
 $todoTypeIcons = $tpl->get('ticketTypeIcons');
+$ticketTypeKey = strtolower((string) ($ticket->type ?? ''));
+$ticketIcon = $todoTypeIcons[$ticketTypeKey] ?? 'fa-list-check';
 
 ?>
 <script type="text/javascript">
@@ -23,11 +25,11 @@ $todoTypeIcons = $tpl->get('ticketTypeIcons');
         <small><a href="#/tickets/showTicket/<?= $ticket->dependingTicketId ?>"><?= $tpl->escape($ticket->parentHeadline) ?></a></small> //
     <?php } ?>
     <small class="tw-float-right tw-pr-md" style="padding:5px 30px 0px 0px">Created by <?php $tpl->e($ticket->userFirstname); ?> <?php $tpl->e($ticket->userLastname); ?> | Last Updated: <?= format($ticket->date)->date(); ?> </small>
-    <h1 class="tw-mb-0" style="margin-bottom:0px;"><i class="fa <?php echo $todoTypeIcons[strtolower($ticket->type)]; ?>"></i> #<?= $ticket->id ?> - <?php $tpl->e($ticket->headline); ?></h1>
+    <h1 class="tw-mb-0" style="margin-bottom:0px;"><i class="fa <?php echo $ticketIcon; ?>"></i> #<?= $ticket->id ?> - <?php $tpl->e($ticket->headline); ?></h1>
 
     <br />
 
-    <?php if ($login::userIsAtLeast($roles::$editor)) {
+    <?php if ($login::userHasRole([$roles::$owner])) {
         $onTheClock = $tpl->get('onTheClock');
         ?>
         <div class="inlineDropDownContainer" style="float:right; z-index:50; padding-top:10px; padding-right:10px;">
@@ -85,7 +87,7 @@ $todoTypeIcons = $tpl->get('ticketTypeIcons');
         <ul>
             <li><a href="#ticketdetails"><span class="fa fa-star"></span> <?php echo $tpl->__('tabs.ticketDetails') ?></a></li>
             <li><a href="#files"><span class="fa fa-file"></span> <?php echo $tpl->__('tabs.files') ?> (<?php echo $tpl->get('numFiles'); ?>)</a></li>
-            <?php if ($login::userIsAtLeast($roles::$editor)) {  ?>
+            <?php if ($login::userHasRole([$roles::$owner])) {  ?>
                 <li><a href="#timesheet"><span class="fa fa-clock"></span> <?php echo $tpl->__('tabs.time_tracking') ?></a></li>
             <?php } ?>
             <?php $tpl->dispatchTplEvent('ticketTabs', ['ticket' => $ticket]); ?>
@@ -101,7 +103,7 @@ $todoTypeIcons = $tpl->get('ticketTypeIcons');
             <?php $tpl->displaySubmodule('files-showAll') ?>
         </div>
 
-        <?php if ($login::userIsAtLeast($roles::$editor)) {  ?>
+        <?php if ($login::userHasRole([$roles::$owner])) {  ?>
             <div id="timesheet">
                 <?php $tpl->displaySubmodule('tickets-timesheet') ?>
             </div>
