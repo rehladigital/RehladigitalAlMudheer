@@ -56,6 +56,8 @@ Website: [https://rehladigital.com](https://rehladigital.com)
   - `/home/<user>/domains/<domain>/public_html/<app-folder>/.env`
   - or `/home/<user>/domains/<domain>/public_html/<app-folder>/config/.env`
 - Required app URL value in env: `LEAN_APP_URL=https://<your-domain>`
+- One-command update on server:
+  - `bash scripts/hostinger-deploy.sh`
 
 ## Setup helper files
 
