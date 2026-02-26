@@ -52,6 +52,11 @@ class EditOwn extends Controller
     {
 
         $row = $this->userRepo->getUser($this->userId);
+        if (! is_array($row) || ! isset($row['id'])) {
+            $this->tpl->setNotification('notifications.username_or_password_incorrect', 'error');
+
+            return FrontcontrollerCore::redirect(BASE_URL.'/auth/logout');
+        }
 
         $userLang = $this->settingsService->getSetting('usersettings.'.$this->userId.'.language');
 

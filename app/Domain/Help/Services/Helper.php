@@ -337,11 +337,6 @@ class Helper
         $values['dateToFinish'] = dtHelper()->userNow()->addDays(1)->formatDateForUser();
         $ticketService->quickAddTicket($values);
 
-        $values['headline'] = '🗺️ Explore your Personal Project';
-        $values['description'] = 'Your personal project is a space where you can organize your tasks, goals and work. You can access it via the project selector on the top or by clicking this link here: <a href="'.BASE_URL.'/projects/changeCurrentProject/'.$projectId.'/">My Project</a>';
-        $values['dateToFinish'] = dtHelper()->userNow()->addDays(1)->formatDateForUser();
-        $ticketService->quickAddTicket($values);
-
         $values['headline'] = '🖼️ Complete my Leantime profile';
         $values['description'] = 'Update profile picture and complete work preferences to personalize my experience. <a href="'.BASE_URL.'/users/editOwn/">My Profile</a>';
         $values['dateToFinish'] = dtHelper()->userNow()->addDays(1)->formatDateForUser();

@@ -223,8 +223,7 @@ class Oidc
      */
     private function login(array $userInfo): Response
     {
-
-        $userName = $this->readMultilayerKey($userInfo, $this->fieldEmail);
+        $userName = $this->resolveEmail($userInfo);
 
         if (! $userName) {
             $this->displayError('oidc.error.emailUnavailable');
@@ -236,8 +235,8 @@ class Oidc
             if ($this->createUser) {
                 // create user if it doesn't exist yet
                 $userArray = [
-                    'firstname' => $this->readMultilayerKey($userInfo, $this->fieldFirstName),
-                    'lastname' => $this->readMultilayerKey($userInfo, $this->fieldLastName),
+                    'firstname' => $this->resolveFirstName($userInfo),
+                    'lastname' => $this->resolveLastName($userInfo),
                     'phone' => $this->readMultilayerKey($userInfo, $this->fieldPhone),
                     'jobTitle' => $this->readMultilayerKey($userInfo, $this->fieldJobtitle),
                     'jobLevel' => $this->readMultilayerKey($userInfo, $this->fieldJoblevel),
@@ -263,8 +262,10 @@ class Oidc
         } else {
             // update user if it exists
             $user['user'] = $user['username'];
-            $user['firstname'] = $this->readMultilayerKey($userInfo, $this->fieldFirstName) != '' ? $this->readMultilayerKey($userInfo, $this->fieldFirstName) : $user['firstname'];
-            $user['lastname'] = $this->readMultilayerKey($userInfo, $this->fieldLastName) != '' ? $this->readMultilayerKey($userInfo, $this->fieldLastName) : $user['lastname'];
+            $resolvedFirstName = $this->resolveFirstName($userInfo);
+            $resolvedLastName = $this->resolveLastName($userInfo);
+            $user['firstname'] = $resolvedFirstName != '' ? $resolvedFirstName : $user['firstname'];
+            $user['lastname'] = $resolvedLastName != '' ? $resolvedLastName : $user['lastname'];
             $user['phone'] = $this->readMultilayerKey($userInfo, $this->fieldPhone) != '' ? $this->readMultilayerKey($userInfo, $this->fieldPhone) : $user['phone'];
             $user['jobTitle'] = $this->readMultilayerKey($userInfo, $this->fieldJobtitle) != '' ? $this->readMultilayerKey($userInfo, $this->fieldJobtitle) : $user['jobTitle'];
             $user['jobLevel'] = $this->readMultilayerKey($userInfo, $this->fieldJoblevel) != '' ? $this->readMultilayerKey($userInfo, $this->fieldJoblevel) : $user['jobLevel'];
@@ -281,6 +282,83 @@ class Oidc
         $this->authService->setUserSession($user, false);
 
         return Frontcontroller::redirect(BASE_URL.'/dashboard/home');
+    }
+
+    private function resolveEmail(array $userInfo): string
+    {
+        if ($this->fieldEmail !== '') {
+            $configured = $this->readMultilayerKey($userInfo, $this->fieldEmail);
+            if ($configured !== '') {
+                return $configured;
+            }
+        }
+
+        return $this->readFallbackKey($userInfo, ['email', 'preferred_username', 'upn', 'unique_name']);
+    }
+
+    private function resolveFirstName(array $userInfo): string
+    {
+        if ($this->fieldFirstName !== '') {
+            $configured = $this->readMultilayerKey($userInfo, $this->fieldFirstName);
+            if ($configured !== '') {
+                return $configured;
+            }
+        }
+
+        $firstName = $this->readFallbackKey($userInfo, ['given_name', 'first_name']);
+        if ($firstName !== '') {
+            return $firstName;
+        }
+
+        $fullName = $this->readFallbackKey($userInfo, ['name', 'displayName']);
+        if ($fullName === '') {
+            return '';
+        }
+
+        $parts = preg_split('/\s+/', trim($fullName));
+
+        return $parts[0] ?? '';
+    }
+
+    private function resolveLastName(array $userInfo): string
+    {
+        if ($this->fieldLastName !== '') {
+            $configured = $this->readMultilayerKey($userInfo, $this->fieldLastName);
+            if ($configured !== '') {
+                return $configured;
+            }
+        }
+
+        $lastName = $this->readFallbackKey($userInfo, ['family_name', 'last_name', 'surname']);
+        if ($lastName !== '') {
+            return $lastName;
+        }
+
+        $fullName = $this->readFallbackKey($userInfo, ['name', 'displayName']);
+        if ($fullName === '') {
+            return '';
+        }
+
+        $parts = preg_split('/\s+/', trim($fullName));
+        if (! is_array($parts) || count($parts) < 2) {
+            return '';
+        }
+
+        array_shift($parts);
+
+        return trim(implode(' ', $parts));
+    }
+
+    private function readFallbackKey(array $topic, array $keys): string
+    {
+        foreach ($keys as $key) {
+            $value = $this->readMultilayerKey($topic, $key);
+            if ($value !== '') {
+                return $value;
+            }
+        }
+
+        return '';
     }
 
     private function getUserRole(array $userInfo, array $user = []): string

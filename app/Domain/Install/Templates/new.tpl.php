@@ -13,6 +13,8 @@
     <form action="<?= BASE_URL ?>/install" method="post" class="registrationForm">
         <h3 class="subtitle"><?= $tpl->language->__('subtitles.login_info'); ?></h3>
         <input type="email" name="email" class="form-control" placeholder="<?= $tpl->language->__('label.email'); ?>" value=""/><br />
+        <input type="password" name="password" class="form-control" placeholder="<?= $tpl->language->__('input.placeholders.enter_password'); ?>" value=""/><br />
+        <input type="password" name="password2" class="form-control" placeholder="Confirm password" value=""/><br />
         <br /><br />
         <h3 class="subtitle"><?= $tpl->language->__('subtitles.user_info'); ?></h3>
         <input type="text" name="firstname" class="form-control" placeholder="<?= $tpl->language->__('label.firstname'); ?>" value=""/><br />
