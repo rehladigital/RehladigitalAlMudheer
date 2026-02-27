@@ -3,6 +3,12 @@ foreach ($__data as $var => $val) {
     $$var = $val; // necessary for blade refactor
 }
 $companySettings = $tpl->get('companySettings');
+$isOwner = (bool) ($tpl->get('isOwner') ?? false);
+$currentProjectId = (int) ($tpl->get('currentProjectId') ?? 0);
+$currentProject = $tpl->get('currentProject');
+$currentProjectName = is_array($currentProject) && isset($currentProject['name']) ? $currentProject['name'] : '';
+$availableVersions = $tpl->get('availableVersions') ?? [];
+$currentVersionRef = (string) ($tpl->get('currentVersionRef') ?? '');
 ?>
 
 <div class="pageheader">
@@ -383,6 +389,50 @@ foreach ($relevanceLevels as $level => $labelKey) { ?>
                                 <hr />
                                 <?= $tpl->__('text.logo_reset')?><br /><br />
                                 <a href="<?= BASE_URL ?>/setting/editCompanySettings?resetLogo=1" class="btn btn-default"><?= $tpl->__('buttons.reset_logo')?></a>
+
+                                <?php if ($isOwner) { ?>
+                                    <hr />
+                                    <h5 class="widgettitle title-light"><span class="fa fa-triangle-exclamation"></span> Project Maintenance</h5>
+                                    <p>
+                                        <strong>Current project:</strong>
+                                        <?php if ($currentProjectId > 0) { ?>
+                                            #<?= (int) $currentProjectId ?> <?= $tpl->escape($currentProjectName) ?>
+                                        <?php } else { ?>
+                                            Not selected
+                                        <?php } ?>
+                                    </p>
+                                    <form method="post" action="<?= BASE_URL ?>/setting/editCompanySettings#details" onsubmit="return confirm('This will permanently remove all tasks in the current project. Continue?');">
+                                        <input type="hidden" name="clearProjectTasks" value="1" />
+                                        <input type="hidden" name="projectId" value="<?= (int) $currentProjectId ?>" />
+                                        <button type="submit" class="btn btn-danger" <?= $currentProjectId <= 0 ? 'disabled="disabled"' : '' ?>>
+                                            Clear All Tasks In Current Project
+                                        </button>
+                                    </form>
+
+                                    <hr />
+                                    <h5 class="widgettitle title-light"><span class="fa fa-code-branch"></span> Version Updater</h5>
+                                    <p>
+                                        <strong>Current version/ref:</strong>
+                                        <?= $tpl->escape($currentVersionRef !== '' ? $currentVersionRef : 'unknown') ?><br />
+                                        This updates tracked repository files only and does not modify <code>.env</code> or user settings.
+                                    </p>
+                                    <form method="post" action="<?= BASE_URL ?>/setting/editCompanySettings#details" onsubmit="return confirm('Update application files to selected version? This keeps .env and user settings unchanged.');">
+                                        <input type="hidden" name="runRepoUpdate" value="1" />
+                                        <div style="margin-bottom:8px;">
+                                            <select name="targetVersion" style="width:100%;">
+                                                <option value="">-- Select Version --</option>
+                                                <?php foreach ($availableVersions as $versionTag) { ?>
+                                                    <option value="<?= $tpl->escape($versionTag) ?>" <?= $versionTag === $currentVersionRef ? 'selected="selected"' : '' ?>>
+                                                        <?= $tpl->escape($versionTag) ?>
+                                                    </option>
+                                                <?php } ?>
+                                            </select>
+                                        </div>
+                                        <button type="submit" class="btn btn-warning" <?= count($availableVersions) === 0 ? 'disabled="disabled"' : '' ?>>
+                                            Update From Repository
+                                        </button>
+                                    </form>
+                                <?php } ?>
                             </div>
                         </div>
                 </div>

@@ -15,6 +15,7 @@ Acknowledgement: This project is built based on the Leantime open-source project
 
 - **Production runtime:** PHP app from repository root (this is the complete app with full theme and modules).
 - **Node migration track:** preserved under `node-migration/` for future modernization work; it is not the active production path.
+- **Release target:** `1.0.0` tag on `main`.
 
 ## About Rehla Digital
 
@@ -36,7 +37,7 @@ Website: [https://rehladigital.com](https://rehladigital.com)
 - Project dashboards, milestones, goals, and reporting
 - Team collaboration with comments, files, and documentation
 - Role-based access control and project-level assignments
-- Timesheets and work tracking (Owner access only)
+- Timesheets and work tracking (planned for a future release)
 
 ## System requirements
 
@@ -97,6 +98,26 @@ Great news: this app is confirmed to run on Hostinger shared hosting (no root ac
 - Include authenticated dashboard validation:
   - `LOGIN_USERNAME=<email> LOGIN_PASSWORD=<password> SITE_URL=https://<your-domain> bash scripts/deploy-checklist.sh`
 
+### In-app version updater (owner only)
+
+- Location: `Administration -> Company Settings -> Version Updater`
+- Purpose: update app files to a selected git tag from this repository.
+- Server prerequisites:
+  - `git` available on server PATH
+  - PHP CLI available (default checks `/opt/alt/php83/usr/bin/php` then `PHP_BINARY`)
+  - writable `storage/framework/` for updater lock file
+  - `composer.phar` present in app root
+- Update flow:
+  - fetch tags
+  - checkout selected tag
+  - run `composer install --no-dev --prefer-dist -o --ignore-platform-reqs`
+  - run `php bin/leantime cache:clearAll`
+- Safety guarantees:
+  - does **not** modify `.env`
+  - does **not** reset DB/install state
+  - does **not** delete `storage/` or `userfiles/`
+  - does **not** overwrite user settings records in DB
+
 ## Setup helper files
 
 - `composer.phar`: local Composer binary included for environments without a global Composer install.
@@ -105,6 +126,11 @@ Great news: this app is confirmed to run on Hostinger shared hosting (no root ac
 Use environment variables with `manual_sqlite_install.php`:
 
 `ALMUDHEER_ADMIN_EMAIL`, `ALMUDHEER_ADMIN_PASSWORD`, `ALMUDHEER_ADMIN_FIRSTNAME`, `ALMUDHEER_ADMIN_LASTNAME`, `ALMUDHEER_COMPANY_NAME`, `ALMUDHEER_COMPANY_COUNTRY`, `ALMUDHEER_CURRENCY_CODE`, `ALMUDHEER_TIMEZONE`
+
+Default helper-script login (if env vars are not set):
+- Email: `admin@admin.com`
+- Password: `admin123`
+- Change this immediately in any non-local/shared environment.
 
 ## Development
 
@@ -120,7 +146,7 @@ php -S localhost:8090 -t public
 - App title and branding are set to **Al Mudheer**
 - Login flow is configured to prioritize SSO
 - Most runtime settings are managed in the database
-- Timesheet pages and stopwatch are restricted to the **Owner** role
+- Timesheets and work tracking are planned for a future release
 
 ## License
 
