@@ -171,9 +171,11 @@ class EditCompanySettings extends Controller
         $currentProject = $currentProjectId > 0 ? $this->projectRepo->getProject($currentProjectId) : false;
         $availableVersions = [];
         $currentVersionRef = '';
+        $versionStatus = [];
         if (Auth::userIsAtLeast(Roles::$owner)) {
             $availableVersions = $this->repoUpdater->listVersions();
             $currentVersionRef = $this->repoUpdater->getCurrentRef();
+            $versionStatus = $this->repoUpdater->getVersionStatus();
         }
 
         $this->tpl->assign('apiKeys', $apiKeys);
@@ -184,6 +186,7 @@ class EditCompanySettings extends Controller
         $this->tpl->assign('currentProject', $currentProject);
         $this->tpl->assign('availableVersions', $availableVersions);
         $this->tpl->assign('currentVersionRef', $currentVersionRef);
+        $this->tpl->assign('versionStatus', $versionStatus);
         $this->tpl->assign('notificationCategories', Notification::NOTIFICATION_CATEGORIES);
         $this->tpl->assign('defaultNotificationTypes', $defaultNotificationTypes);
         $this->tpl->assign('defaultRelevance', $defaultRelevance);
@@ -234,6 +237,12 @@ class EditCompanySettings extends Controller
                 return $this->tpl->display('errors.error403', responseCode: 403);
             }
 
+            if (! $this->repoUpdater->canUseGit()) {
+                $this->tpl->setNotification('Git is not available on this server. Use ZIP package update instead.', 'error');
+
+                return Frontcontroller::redirect(BASE_URL.'/setting/editCompanySettings#details');
+            }
+
             $targetVersion = trim((string) ($params['targetVersion'] ?? ''));
             if ($targetVersion === '') {
                 $this->tpl->setNotification('Please select a version before updating.', 'error');
@@ -251,6 +260,33 @@ class EditCompanySettings extends Controller
             } catch (\Throwable $e) {
                 report($e);
                 $this->tpl->setNotification('Update failed unexpectedly. Please check server logs.', 'error');
+            }
+
+            return Frontcontroller::redirect(BASE_URL.'/setting/editCompanySettings#details');
+        }
+
+        if (isset($params['runPackageUpdate'])) {
+            if (! Auth::userIsAtLeast(Roles::$owner)) {
+                return $this->tpl->display('errors.error403', responseCode: 403);
+            }
+
+            $upload = $_FILES['updatePackage'] ?? null;
+            if (! is_array($upload) || ($upload['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+                $this->tpl->setNotification('Please choose a valid ZIP file before running package update.', 'error');
+
+                return Frontcontroller::redirect(BASE_URL.'/setting/editCompanySettings#details');
+            }
+
+            try {
+                $result = $this->repoUpdater->updateFromUploadedArchive(
+                    (string) ($upload['tmp_name'] ?? ''),
+                    (string) ($upload['name'] ?? '')
+                );
+                $notificationType = ! empty($result['ok']) ? 'success' : 'error';
+                $this->tpl->setNotification($result['message'] ?? 'Package update finished with unknown status.', $notificationType);
+            } catch (\Throwable $e) {
+                report($e);
+                $this->tpl->setNotification('Package update failed unexpectedly. Please check server logs.', 'error');
             }
 
             return Frontcontroller::redirect(BASE_URL.'/setting/editCompanySettings#details');

@@ -64,7 +64,7 @@ class NewProject extends Controller
             'id' => '',
             'name' => '',
             'details' => '',
-            'clientId' => '',
+            'clientId' => (int) (session('userdata.clientId') ?? 0),
             'hourBudget' => '',
             'assignedUsers' => [session('userdata.id')],
             'dollarBudget' => '',
@@ -96,7 +96,7 @@ class NewProject extends Controller
             $values = [
                 'name' => $_POST['name'] ?? '',
                 'details' => $_POST['details'] ?? '',
-                'clientId' => $_POST['clientId'] ?? 0,
+                'clientId' => (int) ($_POST['clientId'] ?? 0),
                 'hourBudget' => $hourBudget,
                 'assignedUsers' => $assignedUsers,
                 'dollarBudget' => $_POST['dollarBudget'] ?? 0,
@@ -109,11 +109,32 @@ class NewProject extends Controller
                 'end' => $_POST['end'] ? format(value: $_POST['end'], fromFormat: FromFormat::UserDateEndOfDay)->isoDateTime() : '',
             ];
 
+            $userRole = (string) (session('userdata.role') ?? '');
+            $currentUserClientId = (int) (session('userdata.clientId') ?? 0);
+            if ($userRole === Roles::$manager && $currentUserClientId > 0) {
+                // Client manager should always create projects under their assigned client.
+                $values['clientId'] = $currentUserClientId;
+            }
+
             if ($values['name'] === '') {
                 $this->tpl->setNotification($this->language->__('notification.no_project_name'), 'error');
-            } elseif ($values['clientId'] === '') {
+            } elseif ((int) $values['clientId'] <= 0) {
                 $this->tpl->setNotification($this->language->__('notification.no_client'), 'error');
             } else {
+                $normalizedName = mb_strtolower(trim((string) $values['name']));
+                $clientProjects = $this->projectRepo->getClientProjects((int) $values['clientId']);
+                foreach ($clientProjects as $existingProject) {
+                    $existingName = mb_strtolower(trim((string) ($existingProject['name'] ?? '')));
+                    if ($existingName !== '' && $existingName === $normalizedName) {
+                        $existingId = (int) ($existingProject['id'] ?? 0);
+                        if ($existingId > 0) {
+                            $this->tpl->setNotification('A project with this name already exists for this client.', 'error');
+
+                            return Frontcontroller::redirect(BASE_URL.'/projects/showProject/'.$existingId);
+                        }
+                    }
+                }
+
                 $projectName = $values['name'];
                 $id = $this->projectRepo->addProject($values);
                 $this->projectService->changeCurrentSessionProject($id);
@@ -153,7 +174,23 @@ class NewProject extends Controller
         $this->tpl->assign('menuTypes', $this->menuRepo->getMenuTypes());
         $this->tpl->assign('project', $values);
         $this->tpl->assign('availableUsers', $this->userRepo->getAll());
-        $this->tpl->assign('clients', $this->clientsRepo->getAll());
+        $clients = $this->clientsRepo->getAll();
+        $userRole = (string) (session('userdata.role') ?? '');
+        $currentUserClientId = (int) (session('userdata.clientId') ?? 0);
+        if ($userRole === Roles::$manager && $currentUserClientId > 0) {
+            $ownClient = $this->clientsRepo->getClient($currentUserClientId);
+            if (is_array($ownClient)) {
+                $clients = [[
+                    'id' => $ownClient['id'],
+                    'name' => $ownClient['name'],
+                    'internet' => $ownClient['internet'] ?? '',
+                    'numberOfProjects' => $ownClient['numberOfProjects'] ?? 0,
+                ]];
+                $values['clientId'] = $ownClient['id'];
+                $this->tpl->assign('project', $values);
+            }
+        }
+        $this->tpl->assign('clients', $clients);
         $this->tpl->assign('projectTypes', $this->projectService->getProjectTypes());
 
         $this->tpl->assign('info', $msgKey);

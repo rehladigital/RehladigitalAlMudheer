@@ -126,6 +126,11 @@ class Theme
             'primaryColor' => '#d1d1d1',
             'secondaryColor' => '#000000',
         ],
+        'rehlaDigital' => [
+            'name' => 'Rehla Digital',
+            'primaryColor' => '#0B3558',
+            'secondaryColor' => '#11A6D8',
+        ],
         'themeDefault' => 'themeDefault',
         'companyColors' => 'companyColors',
     ];

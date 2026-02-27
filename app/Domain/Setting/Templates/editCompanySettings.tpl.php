@@ -9,6 +9,7 @@ $currentProject = $tpl->get('currentProject');
 $currentProjectName = is_array($currentProject) && isset($currentProject['name']) ? $currentProject['name'] : '';
 $availableVersions = $tpl->get('availableVersions') ?? [];
 $currentVersionRef = (string) ($tpl->get('currentVersionRef') ?? '');
+$versionStatus = $tpl->get('versionStatus') ?? [];
 ?>
 
 <div class="pageheader">
@@ -414,24 +415,45 @@ foreach ($relevanceLevels as $level => $labelKey) { ?>
                                     <p>
                                         <strong>Current version/ref:</strong>
                                         <?= $tpl->escape($currentVersionRef !== '' ? $currentVersionRef : 'unknown') ?><br />
-                                        This updates tracked repository files only and does not modify <code>.env</code> or user settings.
+                                        <?php if (($versionStatus['latest'] ?? '') !== '') { ?>
+                                            <strong>Latest release:</strong> <?= $tpl->escape((string) $versionStatus['latest']) ?><br />
+                                        <?php } ?>
+                                        <?php if (! empty($versionStatus['hasUpdate'])) { ?>
+                                            <span class="label label-warning">Update available</span><br />
+                                        <?php } ?>
+                                        Updates keep <code>config/.env</code>, <code>storage/</code>, and <code>userfiles/</code> intact.
                                     </p>
-                                    <form method="post" action="<?= BASE_URL ?>/setting/editCompanySettings#details" onsubmit="return confirm('Update application files to selected version? This keeps .env and user settings unchanged.');">
-                                        <input type="hidden" name="runRepoUpdate" value="1" />
+                                    <?php if (count($availableVersions) > 0) { ?>
+                                        <form method="post" action="<?= BASE_URL ?>/setting/editCompanySettings#details" onsubmit="return confirm('Update application files to selected version? This keeps .env and user settings unchanged.');">
+                                            <input type="hidden" name="runRepoUpdate" value="1" />
+                                            <div style="margin-bottom:8px;">
+                                                <select name="targetVersion" style="width:100%;">
+                                                    <option value="">-- Select Version --</option>
+                                                    <?php foreach ($availableVersions as $versionTag) { ?>
+                                                        <option value="<?= $tpl->escape($versionTag) ?>" <?= $versionTag === $currentVersionRef ? 'selected="selected"' : '' ?>>
+                                                            <?= $tpl->escape($versionTag) ?>
+                                                        </option>
+                                                    <?php } ?>
+                                                </select>
+                                            </div>
+                                            <button type="submit" class="btn btn-warning">
+                                                Update From Repository Tags
+                                            </button>
+                                        </form>
+                                    <?php } ?>
+
+                                    <form method="post" enctype="multipart/form-data" action="<?= BASE_URL ?>/setting/editCompanySettings#details" onsubmit="return confirm('Upload ZIP and update application files? .env, storage, and userfiles will be preserved.');" style="margin-top:12px;">
+                                        <input type="hidden" name="runPackageUpdate" value="1" />
                                         <div style="margin-bottom:8px;">
-                                            <select name="targetVersion" style="width:100%;">
-                                                <option value="">-- Select Version --</option>
-                                                <?php foreach ($availableVersions as $versionTag) { ?>
-                                                    <option value="<?= $tpl->escape($versionTag) ?>" <?= $versionTag === $currentVersionRef ? 'selected="selected"' : '' ?>>
-                                                        <?= $tpl->escape($versionTag) ?>
-                                                    </option>
-                                                <?php } ?>
-                                            </select>
+                                            <input type="file" name="updatePackage" accept=".zip" required />
                                         </div>
-                                        <button type="submit" class="btn btn-warning" <?= count($availableVersions) === 0 ? 'disabled="disabled"' : '' ?>>
-                                            Update From Repository
+                                        <button type="submit" class="btn btn-primary">
+                                            Update From ZIP Package
                                         </button>
                                     </form>
+                                    <small>
+                                        Download release ZIP from your repository, then upload here. This server mode works without Git.
+                                    </small>
                                 <?php } ?>
                             </div>
                         </div>

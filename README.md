@@ -101,22 +101,38 @@ Great news: this app is confirmed to run on Hostinger shared hosting (no root ac
 ### In-app version updater (owner only)
 
 - Location: `Administration -> Company Settings -> Version Updater`
-- Purpose: update app files to a selected git tag from this repository.
-- Server prerequisites:
-  - `git` available on server PATH
-  - PHP CLI available (default checks `/opt/alt/php83/usr/bin/php` then `PHP_BINARY`)
-  - writable `storage/framework/` for updater lock file
-  - `composer.phar` present in app root
-- Update flow:
-  - fetch tags
-  - checkout selected tag
-  - run `composer install --no-dev --prefer-dist -o --ignore-platform-reqs`
-  - run `php bin/leantime cache:clearAll`
+- Purpose: update app files with either:
+  - Git tag update (if git exists on server), or
+  - Manual ZIP package upload (works on Hostinger shared hosting without git).
+- ZIP update flow:
+  - download release ZIP from repository
+  - upload ZIP in `Version Updater`
+  - system updates files while preserving runtime paths
+  - runs `composer install --no-dev --prefer-dist -o --ignore-platform-reqs`
+  - runs `php bin/leantime cache:clearAll`
 - Safety guarantees:
-  - does **not** modify `.env`
+  - does **not** modify `config/.env`
   - does **not** reset DB/install state
   - does **not** delete `storage/` or `userfiles/`
   - does **not** overwrite user settings records in DB
+- Update notification:
+  - `Version Updater` shows latest release and flags when a newer version is available.
+
+### Recommended FTP update command (safe sync)
+
+Use this script for future deployments to avoid overwriting runtime data:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/ftp-safe-sync.ps1 `
+  -Host "185.162.54.190" `
+  -Port 65002 `
+  -User "<hostinger-user>" `
+  -Password "<hostinger-password>" `
+  -RemotePath "/home/<user>/domains/<domain>/public_html/pm" `
+  -SourcePath "."
+```
+
+This sync excludes `config/.env`, `storage/`, `userfiles/`, local logs, databases, and developer-only folders.
 
 ## Setup helper files
 
@@ -146,7 +162,6 @@ php -S localhost:8090 -t public
 - App title and branding are set to **Al Mudheer**
 - Login flow is configured to prioritize SSO
 - Most runtime settings are managed in the database
-<<<<<<< HEAD
 - Timesheets and work tracking are planned for a future release
 
 ## License
