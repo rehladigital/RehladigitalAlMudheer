@@ -23,8 +23,8 @@ $app = require __DIR__.'/bootstrap/app.php';
 $app->make(Kernel::class)->bootstrap();
 Facade::setFacadeApplication($app);
 
-$email = getenv('ALMUDHEER_ADMIN_EMAIL') ?: 'admin@example.com';
-$password = getenv('ALMUDHEER_ADMIN_PASSWORD') ?: 'ChangeMe123!';
+$email = getenv('ALMUDHEER_ADMIN_EMAIL') ?: 'admin@admin.com';
+$password = getenv('ALMUDHEER_ADMIN_PASSWORD') ?: 'admin123';
 $firstName = getenv('ALMUDHEER_ADMIN_FIRSTNAME') ?: 'Admin';
 $lastName = getenv('ALMUDHEER_ADMIN_LASTNAME') ?: 'User';
 $company = getenv('ALMUDHEER_COMPANY_NAME') ?: 'Rehla Digital Inc';
