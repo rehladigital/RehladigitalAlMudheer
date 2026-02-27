@@ -192,7 +192,7 @@ class DefaultConfig
      * @var string Salting sessions. Replace with a strong password
      */
     #[LaravelConfig('app.key')]
-    public string $sessionPassword = '3evBlq9zdUEuzKvVJHWWx3QzsQhturBApxwcws2m';
+    public string $sessionPassword = 'CHANGE_ME_SESSION_SECRET';
 
     /**
      * @var int How many minutes after inactivity should we logout?  480min = 8hours

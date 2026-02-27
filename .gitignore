@@ -136,3 +136,9 @@ config/.env
 tests/Httprequests/http-client.private.env.json
 .claude/docs/personal-companion-requirements.md
 .claude/docs/git-workflow.md
+
+# AI assistant/chat artifacts
+/.claude/
+/CLAUDE.md
+/AGENTS.md
+/.cursor/
