@@ -57,6 +57,14 @@ class SchemaBuilder
         $this->createAccessTokensTable();
         $this->createJobsTable();
         $this->createRecurringPatternsTable();
+        $this->createOrgDepartmentsTable();
+        $this->createOrgRolesTable();
+        $this->createOrgRolePermissionsTable();
+        $this->createOrgUserRolesTable();
+        $this->createOrgUserClientsTable();
+        $this->createOrgUserDepartmentsTable();
+        $this->createOrgDepartmentClientsTable();
+        $this->createOrgProjectDepartmentsTable();
     }
 
     /**
@@ -117,6 +125,26 @@ class SchemaBuilder
             ['key' => 'companysettings.telemetry.active', 'value' => 'true'],
             ['key' => 'companysettings.completedOnboarding', 'value' => 'true'],
         ]);
+
+        DB::table('zp_org_roles')->insert([
+            ['name' => 'Owner', 'slug' => 'owner', 'systemRole' => 50, 'isProtected' => 1, 'createdOn' => now(), 'updatedOn' => now()],
+            ['name' => 'Admin', 'slug' => 'admin', 'systemRole' => 40, 'isProtected' => 1, 'createdOn' => now(), 'updatedOn' => now()],
+            ['name' => 'Manager', 'slug' => 'manager', 'systemRole' => 30, 'isProtected' => 1, 'createdOn' => now(), 'updatedOn' => now()],
+            ['name' => 'Editor', 'slug' => 'editor', 'systemRole' => 20, 'isProtected' => 1, 'createdOn' => now(), 'updatedOn' => now()],
+            ['name' => 'Commenter', 'slug' => 'commenter', 'systemRole' => 10, 'isProtected' => 1, 'createdOn' => now(), 'updatedOn' => now()],
+            ['name' => 'Readonly', 'slug' => 'readonly', 'systemRole' => 5, 'isProtected' => 1, 'createdOn' => now(), 'updatedOn' => now()],
+            ['name' => 'Company Manager', 'slug' => 'company-manager', 'systemRole' => 40, 'isProtected' => 1, 'createdOn' => now(), 'updatedOn' => now()],
+            ['name' => 'Department Manager', 'slug' => 'department-manager', 'systemRole' => 30, 'isProtected' => 1, 'createdOn' => now(), 'updatedOn' => now()],
+        ]);
+
+        $ownerRoleId = (int) DB::table('zp_org_roles')->where('slug', 'owner')->value('id');
+        if ($ownerRoleId > 0) {
+            DB::table('zp_org_user_roles')->insert([
+                'userId' => 1,
+                'roleId' => $ownerRoleId,
+                'updatedOn' => now(),
+            ]);
+        }
     }
 
     /**
@@ -830,6 +858,104 @@ class SchemaBuilder
             $table->tinyInteger('enabled')->default(1);
 
             $table->index(['entityId'], 'idx_recurring_patterns_entityId');
+        });
+    }
+
+    private function createOrgDepartmentsTable(): void
+    {
+        Schema::create('zp_org_departments', function (Blueprint $table) {
+            $table->id();
+            $table->string('name', 150);
+            $table->string('slug', 180)->unique();
+            $table->tinyInteger('isActive')->default(1);
+            $table->dateTime('createdOn')->nullable();
+            $table->dateTime('updatedOn')->nullable();
+        });
+    }
+
+    private function createOrgRolesTable(): void
+    {
+        Schema::create('zp_org_roles', function (Blueprint $table) {
+            $table->id();
+            $table->string('name', 150);
+            $table->string('slug', 180)->unique();
+            $table->integer('systemRole')->default(20);
+            $table->tinyInteger('isProtected')->default(0);
+            $table->dateTime('createdOn')->nullable();
+            $table->dateTime('updatedOn')->nullable();
+        });
+    }
+
+    private function createOrgRolePermissionsTable(): void
+    {
+        Schema::create('zp_org_role_permissions', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('roleId');
+            $table->string('permissionKey', 190);
+            $table->tinyInteger('isAllowed')->default(1);
+            $table->dateTime('createdOn')->nullable();
+
+            $table->unique(['roleId', 'permissionKey'], 'ux_org_role_perm');
+        });
+    }
+
+    private function createOrgUserRolesTable(): void
+    {
+        Schema::create('zp_org_user_roles', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('userId');
+            $table->unsignedBigInteger('roleId');
+            $table->dateTime('updatedOn')->nullable();
+
+            $table->unique(['userId'], 'ux_org_user_role');
+        });
+    }
+
+    private function createOrgUserClientsTable(): void
+    {
+        Schema::create('zp_org_user_clients', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('userId');
+            $table->unsignedBigInteger('clientId');
+            $table->dateTime('createdOn')->nullable();
+
+            $table->unique(['userId', 'clientId'], 'ux_org_user_client');
+        });
+    }
+
+    private function createOrgUserDepartmentsTable(): void
+    {
+        Schema::create('zp_org_user_departments', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('userId');
+            $table->unsignedBigInteger('departmentId');
+            $table->dateTime('createdOn')->nullable();
+
+            $table->unique(['userId', 'departmentId'], 'ux_org_user_department');
+        });
+    }
+
+    private function createOrgDepartmentClientsTable(): void
+    {
+        Schema::create('zp_org_department_clients', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('departmentId');
+            $table->unsignedBigInteger('clientId');
+            $table->dateTime('createdOn')->nullable();
+
+            $table->unique(['departmentId', 'clientId'], 'ux_org_department_client');
+        });
+    }
+
+    private function createOrgProjectDepartmentsTable(): void
+    {
+        Schema::create('zp_org_project_departments', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('projectId');
+            $table->unsignedBigInteger('departmentId');
+            $table->dateTime('updatedOn')->nullable();
+
+            $table->unique(['projectId'], 'ux_org_project_department_project');
         });
     }
 }

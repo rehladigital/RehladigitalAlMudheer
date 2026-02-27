@@ -80,6 +80,7 @@ class Install
         30412,
         30413,
         30500,
+        30510,
     ];
 
     /**
@@ -2471,5 +2472,171 @@ class Install
         }
 
         return true;
+    }
+
+    /**
+     * Migration 30510: Organization RBAC tables + baseline data.
+     *
+     * Creates normalized tables for departments, business roles, and user/client/department mappings.
+     * This migration is idempotent and safe to run multiple times.
+     */
+    public function update_sql_30510(): bool|array
+    {
+        try {
+            if (! Schema::hasTable('zp_org_departments')) {
+                Schema::create('zp_org_departments', function (Blueprint $table) {
+                    $table->id();
+                    $table->string('name', 150);
+                    $table->string('slug', 180)->unique();
+                    $table->tinyInteger('isActive')->default(1);
+                    $table->dateTime('createdOn')->nullable();
+                    $table->dateTime('updatedOn')->nullable();
+                });
+            }
+
+            if (! Schema::hasTable('zp_org_roles')) {
+                Schema::create('zp_org_roles', function (Blueprint $table) {
+                    $table->id();
+                    $table->string('name', 150);
+                    $table->string('slug', 180)->unique();
+                    $table->integer('systemRole')->default(20);
+                    $table->tinyInteger('isProtected')->default(0);
+                    $table->dateTime('createdOn')->nullable();
+                    $table->dateTime('updatedOn')->nullable();
+                });
+            }
+
+            if (! Schema::hasTable('zp_org_role_permissions')) {
+                Schema::create('zp_org_role_permissions', function (Blueprint $table) {
+                    $table->id();
+                    $table->unsignedBigInteger('roleId');
+                    $table->string('permissionKey', 190);
+                    $table->tinyInteger('isAllowed')->default(1);
+                    $table->dateTime('createdOn')->nullable();
+                    $table->unique(['roleId', 'permissionKey'], 'ux_org_role_perm');
+                });
+            }
+
+            if (! Schema::hasTable('zp_org_user_roles')) {
+                Schema::create('zp_org_user_roles', function (Blueprint $table) {
+                    $table->id();
+                    $table->unsignedBigInteger('userId');
+                    $table->unsignedBigInteger('roleId');
+                    $table->dateTime('updatedOn')->nullable();
+                    $table->unique(['userId'], 'ux_org_user_role');
+                });
+            }
+
+            if (! Schema::hasTable('zp_org_user_clients')) {
+                Schema::create('zp_org_user_clients', function (Blueprint $table) {
+                    $table->id();
+                    $table->unsignedBigInteger('userId');
+                    $table->unsignedBigInteger('clientId');
+                    $table->dateTime('createdOn')->nullable();
+                    $table->unique(['userId', 'clientId'], 'ux_org_user_client');
+                });
+            }
+
+            if (! Schema::hasTable('zp_org_user_departments')) {
+                Schema::create('zp_org_user_departments', function (Blueprint $table) {
+                    $table->id();
+                    $table->unsignedBigInteger('userId');
+                    $table->unsignedBigInteger('departmentId');
+                    $table->dateTime('createdOn')->nullable();
+                    $table->unique(['userId', 'departmentId'], 'ux_org_user_department');
+                });
+            }
+
+            if (! Schema::hasTable('zp_org_department_clients')) {
+                Schema::create('zp_org_department_clients', function (Blueprint $table) {
+                    $table->id();
+                    $table->unsignedBigInteger('departmentId');
+                    $table->unsignedBigInteger('clientId');
+                    $table->dateTime('createdOn')->nullable();
+                    $table->unique(['departmentId', 'clientId'], 'ux_org_department_client');
+                });
+            }
+
+            if (! Schema::hasTable('zp_org_project_departments')) {
+                Schema::create('zp_org_project_departments', function (Blueprint $table) {
+                    $table->id();
+                    $table->unsignedBigInteger('projectId');
+                    $table->unsignedBigInteger('departmentId');
+                    $table->dateTime('updatedOn')->nullable();
+                    $table->unique(['projectId'], 'ux_org_project_department_project');
+                });
+            }
+
+            $seedRoles = [
+                ['name' => 'Owner', 'slug' => 'owner', 'systemRole' => 50, 'isProtected' => 1],
+                ['name' => 'Admin', 'slug' => 'admin', 'systemRole' => 40, 'isProtected' => 1],
+                ['name' => 'Manager', 'slug' => 'manager', 'systemRole' => 30, 'isProtected' => 1],
+                ['name' => 'Editor', 'slug' => 'editor', 'systemRole' => 20, 'isProtected' => 1],
+                ['name' => 'Commenter', 'slug' => 'commenter', 'systemRole' => 10, 'isProtected' => 1],
+                ['name' => 'Readonly', 'slug' => 'readonly', 'systemRole' => 5, 'isProtected' => 1],
+                ['name' => 'Company Manager', 'slug' => 'company-manager', 'systemRole' => 40, 'isProtected' => 1],
+                ['name' => 'Department Manager', 'slug' => 'department-manager', 'systemRole' => 30, 'isProtected' => 1],
+            ];
+
+            foreach ($seedRoles as $role) {
+                $exists = $this->connection->table('zp_org_roles')->where('slug', $role['slug'])->exists();
+                if (! $exists) {
+                    $this->connection->table('zp_org_roles')->insert([
+                        'name' => $role['name'],
+                        'slug' => $role['slug'],
+                        'systemRole' => $role['systemRole'],
+                        'isProtected' => $role['isProtected'],
+                        'createdOn' => date('Y-m-d H:i:s'),
+                        'updatedOn' => date('Y-m-d H:i:s'),
+                    ]);
+                }
+            }
+
+            if (Schema::hasTable('zp_user')) {
+                $users = $this->connection->table('zp_user')->select(['id', 'role', 'clientId'])->get();
+                foreach ($users as $user) {
+                    $userId = (int) $user->id;
+                    $systemRole = (int) ($user->role ?? 20);
+
+                    $slug = match (true) {
+                        $systemRole >= 50 => 'owner',
+                        $systemRole >= 40 => 'admin',
+                        $systemRole >= 30 => 'company-manager',
+                        $systemRole >= 20 => 'editor',
+                        $systemRole >= 10 => 'commenter',
+                        default => 'readonly',
+                    };
+
+                    $roleId = (int) $this->connection->table('zp_org_roles')->where('slug', $slug)->value('id');
+                    if ($roleId > 0) {
+                        $this->connection->table('zp_org_user_roles')->updateOrInsert(
+                            ['userId' => $userId],
+                            ['roleId' => $roleId, 'updatedOn' => date('Y-m-d H:i:s')]
+                        );
+                    }
+
+                    $clientId = (int) ($user->clientId ?? 0);
+                    if ($clientId > 0) {
+                        $exists = $this->connection->table('zp_org_user_clients')
+                            ->where('userId', $userId)
+                            ->where('clientId', $clientId)
+                            ->exists();
+                        if (! $exists) {
+                            $this->connection->table('zp_org_user_clients')->insert([
+                                'userId' => $userId,
+                                'clientId' => $clientId,
+                                'createdOn' => date('Y-m-d H:i:s'),
+                            ]);
+                        }
+                    }
+                }
+            }
+
+            return true;
+        } catch (\Throwable $e) {
+            Log::error('Migration 30510: '.$e->getMessage());
+
+            return ['Migration 30510 failed. Please review logs.'];
+        }
     }
 }

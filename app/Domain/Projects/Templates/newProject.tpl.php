@@ -132,6 +132,25 @@ $project = $tpl->get('project');
 
                             <div style="margin-bottom: 30px;">
                                 <div class="">
+                                    <h4 class="widgettitle title-light"><span class="fa fa-diagram-project"></span> Department</h4>
+                                    <select name="departmentId" id="departmentId" <?= ! empty($tpl->get('isDepartmentManager')) ? 'required="required"' : '' ?>>
+                                        <option value="0">-- Select Department --</option>
+                                        <?php foreach (($tpl->get('availableDepartments') ?? []) as $department) { ?>
+                                            <option value="<?php echo (int) $department['id']; ?>"
+                                                <?php if ((int) ($project['departmentId'] ?? 0) === (int) $department['id']) { ?>
+                                                    selected="selected"
+                                                <?php } ?>
+                                            ><?php $tpl->e($department['name']); ?></option>
+                                        <?php } ?>
+                                    </select>
+                                    <?php if (! empty($tpl->get('isDepartmentManager'))) { ?>
+                                        <small>Department Manager must select an assigned department.</small>
+                                    <?php } ?>
+                                </div>
+                            </div>
+
+                            <div style="margin-bottom: 30px;">
+                                <div class="">
                                     <h4 class="widgettitle title-light"><span
                                             class="fa fa-lock-open"></span><?php echo $tpl->__('labels.defaultaccess'); ?></h4>
                                     <?php echo $tpl->__('text.who_can_access'); ?>

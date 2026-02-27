@@ -24,7 +24,9 @@ Use this guide for a clean new installation on a new server or Hostinger hosting
 
 ## 2) Download and Upload Files
 
-1. Download the project ZIP from repository release/source.
+1. Download the latest release ZIP from GitHub Releases (recommended for direct install).
+   - Example release page: `https://github.com/rehladigital/Al-Mudheer/releases`
+   - Download the `Source code (zip)` for version `2.10` (or latest).
 2. Extract and upload all files to your app folder, for example:
    - `/home/<user>/domains/<domain>/public_html/almudheer`
 3. Keep writable runtime folders available (if used in your environment):

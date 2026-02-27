@@ -22,6 +22,7 @@ use Leantime\Domain\Notifications\Services\Messengers;
 use Leantime\Domain\Notifications\Services\Notifications as NotificationService;
 use Leantime\Domain\Projects\Repositories\Projects as ProjectRepository;
 use Leantime\Domain\Queue\Repositories\Queue as QueueRepository;
+use Leantime\Domain\Setting\Repositories\Organization as OrganizationRepository;
 use Leantime\Domain\Setting\Repositories\Setting as SettingRepository;
 use Leantime\Domain\Tickets\Repositories\Tickets as TicketRepository;
 use Leantime\Domain\Wiki\Repositories\Wiki;
@@ -36,6 +37,7 @@ class Projects
         private ProjectRepository $projectRepository,
         private TicketRepository $ticketRepository,
         private SettingRepository $settingsRepo,
+        private OrganizationRepository $organizationRepo,
         private LanguageCore $language,
         private Messengers $messengerService,
         private NotificationService $notificationService,
@@ -1218,6 +1220,10 @@ class Projects
      */
     public function addProject(array $values): int|false
     {
+        $guardResult = $this->validateProjectCreationScope($values);
+        if (! $guardResult['allowed']) {
+            return false;
+        }
 
         $values = [
             'name' => $values['name'],
@@ -1230,6 +1236,7 @@ class Projects
             'type' => 'project',
             'start' => $values['start'] ?? null,
             'end' => $values['end'] ?? null,
+            'departmentId' => (int) ($values['departmentId'] ?? 0),
         ];
         if ($values['start'] != null) {
             $values['start'] = format(value: $values['start'], fromFormat: FromFormat::UserDateStartOfDay)->isoDateTime();
@@ -1238,7 +1245,51 @@ class Projects
             $values['end'] = format($values['end'], fromFormat: FromFormat::UserDateEndOfDay)->isoDateTime();
         }
 
-        return $this->projectRepository->addProject($values);
+        $projectId = $this->projectRepository->addProject($values);
+
+        if ($projectId !== false) {
+            $departmentId = (int) ($values['departmentId'] ?? 0);
+            if ($departmentId > 0) {
+                $this->organizationRepo->linkProjectDepartment((int) $projectId, $departmentId);
+            }
+        }
+
+        return $projectId;
+    }
+
+    public function validateProjectCreationScope(array $values): array
+    {
+        $userId = (int) (session('userdata.id') ?? 0);
+        if ($userId <= 0) {
+            return ['allowed' => false, 'message' => 'User session is invalid. Please sign in again.'];
+        }
+
+        $userRole = (string) (session('userdata.role') ?? '');
+        if (in_array($userRole, [Roles::$owner, Roles::$admin], true)) {
+            return ['allowed' => true, 'message' => ''];
+        }
+
+        $businessRole = $this->organizationRepo->getUserBusinessRole($userId);
+        $businessSlug = (string) ($businessRole['slug'] ?? '');
+
+        if ($businessSlug !== 'department-manager') {
+            return ['allowed' => true, 'message' => ''];
+        }
+
+        $clientId = (int) ($values['clientId'] ?? 0);
+        $departmentId = (int) ($values['departmentId'] ?? 0);
+        $allowedClients = $this->organizationRepo->getUserClientIds($userId);
+        $allowedDepartments = $this->organizationRepo->getUserDepartmentIds($userId);
+
+        if ($clientId <= 0 || ! in_array($clientId, $allowedClients, true)) {
+            return ['allowed' => false, 'message' => 'Department Manager can only create projects for assigned clients.'];
+        }
+
+        if ($departmentId <= 0 || ! in_array($departmentId, $allowedDepartments, true)) {
+            return ['allowed' => false, 'message' => 'Department Manager can only create projects in assigned departments.'];
+        }
+
+        return ['allowed' => true, 'message' => ''];
     }
 
     /**

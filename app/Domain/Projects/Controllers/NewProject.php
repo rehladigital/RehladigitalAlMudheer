@@ -13,6 +13,7 @@ use Leantime\Domain\Menu\Repositories\Menu as MenuRepository;
 use Leantime\Domain\Projects\Repositories\Projects as ProjectRepository;
 use Leantime\Domain\Projects\Services\Projects as ProjectService;
 use Leantime\Domain\Queue\Repositories\Queue as QueueRepository;
+use Leantime\Domain\Setting\Repositories\Organization as OrganizationRepository;
 use Leantime\Domain\Users\Repositories\Users as UserRepository;
 
 class NewProject extends Controller
@@ -29,6 +30,8 @@ class NewProject extends Controller
 
     private ProjectService $projectService;
 
+    private OrganizationRepository $organizationRepo;
+
     /**
      * init - initialize private variables
      */
@@ -38,7 +41,8 @@ class NewProject extends Controller
         UserRepository $userRepo,
         ClientRepository $clientsRepo,
         QueueRepository $queueRepo,
-        ProjectService $projectService
+        ProjectService $projectService,
+        OrganizationRepository $organizationRepo
     ) {
         $this->projectRepo = $projectRepo;
         $this->menuRepo = $menuRepo;
@@ -46,6 +50,7 @@ class NewProject extends Controller
         $this->clientsRepo = $clientsRepo;
         $this->queueRepo = $queueRepo;
         $this->projectService = $projectService;
+        $this->organizationRepo = $organizationRepo;
     }
 
     /**
@@ -75,6 +80,7 @@ class NewProject extends Controller
             'psettings' => '',
             'start' => '',
             'end' => '',
+            'departmentId' => 0,
         ];
 
         if (isset($_POST['save']) === true) {
@@ -107,6 +113,7 @@ class NewProject extends Controller
                 'parent' => $_POST['parent'] ?? '',
                 'start' => format(value: $_POST['start'], fromFormat: FromFormat::UserDateStartOfDay)->isoDateTime(),
                 'end' => $_POST['end'] ? format(value: $_POST['end'], fromFormat: FromFormat::UserDateEndOfDay)->isoDateTime() : '',
+                'departmentId' => (int) ($_POST['departmentId'] ?? 0),
             ];
 
             $userRole = (string) (session('userdata.role') ?? '');
@@ -121,6 +128,14 @@ class NewProject extends Controller
             } elseif ((int) $values['clientId'] <= 0) {
                 $this->tpl->setNotification($this->language->__('notification.no_client'), 'error');
             } else {
+                $scopeCheck = $this->projectService->validateProjectCreationScope($values);
+                if (! $scopeCheck['allowed']) {
+                    $this->tpl->setNotification((string) $scopeCheck['message'], 'error');
+                    $this->tpl->assign('project', $values);
+
+                    return $this->tpl->display('projects.newProject');
+                }
+
                 $normalizedName = mb_strtolower(trim((string) $values['name']));
                 $clientProjects = $this->projectRepo->getClientProjects((int) $values['clientId']);
                 foreach ($clientProjects as $existingProject) {
@@ -136,7 +151,13 @@ class NewProject extends Controller
                 }
 
                 $projectName = $values['name'];
-                $id = $this->projectRepo->addProject($values);
+                $id = $this->projectService->addProject($values);
+                if (! $id) {
+                    $this->tpl->setNotification('Project could not be created due to scope restrictions.', 'error');
+                    $this->tpl->assign('project', $values);
+
+                    return $this->tpl->display('projects.newProject');
+                }
                 $this->projectService->changeCurrentSessionProject($id);
 
                 $users = $this->projectRepo->getUsersAssignedToProject($id);
@@ -190,6 +211,13 @@ class NewProject extends Controller
                 $this->tpl->assign('project', $values);
             }
         }
+        $businessRole = $this->organizationRepo->getUserBusinessRole((int) session('userdata.id'));
+        $isDepartmentManager = (($businessRole['slug'] ?? '') === 'department-manager');
+        $availableDepartments = $isDepartmentManager
+            ? $this->organizationRepo->getDepartmentsForUser((int) session('userdata.id'))
+            : $this->organizationRepo->getDepartments();
+        $this->tpl->assign('availableDepartments', $availableDepartments);
+        $this->tpl->assign('isDepartmentManager', $isDepartmentManager);
         $this->tpl->assign('clients', $clients);
         $this->tpl->assign('projectTypes', $this->projectService->getProjectTypes());
 
