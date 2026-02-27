@@ -10,8 +10,10 @@ use Leantime\Domain\Api\Services\Api as ApiService;
 use Leantime\Domain\Auth\Models\Roles;
 use Leantime\Domain\Auth\Services\Auth;
 use Leantime\Domain\Notifications\Models\Notification;
+use Leantime\Domain\Projects\Repositories\Projects as ProjectRepository;
 use Leantime\Domain\Reports\Services\Reports as ReportService;
 use Leantime\Domain\Setting\Repositories\Setting as SettingRepository;
+use Leantime\Domain\Setting\Services\RepoUpdater;
 use Leantime\Domain\Setting\Services\Setting as SettingService;
 
 class EditCompanySettings extends Controller
@@ -26,6 +28,10 @@ class EditCompanySettings extends Controller
 
     private Environment $config;
 
+    private ProjectRepository $projectRepo;
+
+    private RepoUpdater $repoUpdater;
+
     /**
      * constructor - initialize private variables
      */
@@ -33,8 +39,10 @@ class EditCompanySettings extends Controller
         SettingRepository $settingsRepo,
         ApiService $APIService,
         SettingService $settingsSvc,
+        RepoUpdater $repoUpdater,
         Theme $theme,
         Environment $config,
+        ProjectRepository $projectRepo,
 
     ) {
         Auth::authOrRedirect([Roles::$owner, Roles::$admin], true);
@@ -42,8 +50,10 @@ class EditCompanySettings extends Controller
         $this->settingsRepo = $settingsRepo;
         $this->APIService = $APIService;
         $this->settingsSvc = $settingsSvc;
+        $this->repoUpdater = $repoUpdater;
         $this->theme = $theme;
         $this->config = $config;
+        $this->projectRepo = $projectRepo;
     }
 
     /**
@@ -157,10 +167,23 @@ class EditCompanySettings extends Controller
         }
 
         $apiKeys = $this->APIService->getAPIKeys();
+        $currentProjectId = (int) (session('currentProject') ?? 0);
+        $currentProject = $currentProjectId > 0 ? $this->projectRepo->getProject($currentProjectId) : false;
+        $availableVersions = [];
+        $currentVersionRef = '';
+        if (Auth::userIsAtLeast(Roles::$owner)) {
+            $availableVersions = $this->repoUpdater->listVersions();
+            $currentVersionRef = $this->repoUpdater->getCurrentRef();
+        }
 
         $this->tpl->assign('apiKeys', $apiKeys);
         $this->tpl->assign('languageList', $this->language->getLanguageList());
         $this->tpl->assign('companySettings', $companySettings);
+        $this->tpl->assign('isOwner', Auth::userIsAtLeast(Roles::$owner));
+        $this->tpl->assign('currentProjectId', $currentProjectId);
+        $this->tpl->assign('currentProject', $currentProject);
+        $this->tpl->assign('availableVersions', $availableVersions);
+        $this->tpl->assign('currentVersionRef', $currentVersionRef);
         $this->tpl->assign('notificationCategories', Notification::NOTIFICATION_CATEGORIES);
         $this->tpl->assign('defaultNotificationTypes', $defaultNotificationTypes);
         $this->tpl->assign('defaultRelevance', $defaultRelevance);
@@ -177,6 +200,62 @@ class EditCompanySettings extends Controller
      */
     public function post($params)
     {
+        if (isset($params['clearProjectTasks'])) {
+            if (! Auth::userIsAtLeast(Roles::$owner)) {
+                return $this->tpl->display('errors.error403', responseCode: 403);
+            }
+
+            $projectId = (int) ($params['projectId'] ?? session('currentProject') ?? 0);
+            if ($projectId <= 0) {
+                $this->tpl->setNotification('No active project selected to clear.', 'error');
+
+                return Frontcontroller::redirect(BASE_URL.'/setting/editCompanySettings#details');
+            }
+
+            $project = $this->projectRepo->getProject($projectId);
+            if ($project === false) {
+                $this->tpl->setNotification('Project was not found.', 'error');
+
+                return Frontcontroller::redirect(BASE_URL.'/setting/editCompanySettings#details');
+            }
+
+            $deletedCount = $this->projectRepo->clearProjectTasks($projectId);
+            $projectName = (string) ($project['name'] ?? ('#'.$projectId));
+            $this->tpl->setNotification(
+                'Cleared '.$deletedCount.' tasks from project "'.$projectName.'".',
+                'success'
+            );
+
+            return Frontcontroller::redirect(BASE_URL.'/setting/editCompanySettings#details');
+        }
+
+        if (isset($params['runRepoUpdate'])) {
+            if (! Auth::userIsAtLeast(Roles::$owner)) {
+                return $this->tpl->display('errors.error403', responseCode: 403);
+            }
+
+            $targetVersion = trim((string) ($params['targetVersion'] ?? ''));
+            if ($targetVersion === '') {
+                $this->tpl->setNotification('Please select a version before updating.', 'error');
+
+                return Frontcontroller::redirect(BASE_URL.'/setting/editCompanySettings#details');
+            }
+
+            try {
+                $result = $this->repoUpdater->updateToVersion($targetVersion);
+                $notificationType = ! empty($result['ok']) ? 'success' : 'error';
+                $this->tpl->setNotification(
+                    $result['message'] ?? 'Update command completed with unknown status.',
+                    $notificationType
+                );
+            } catch (\Throwable $e) {
+                report($e);
+                $this->tpl->setNotification('Update failed unexpectedly. Please check server logs.', 'error');
+            }
+
+            return Frontcontroller::redirect(BASE_URL.'/setting/editCompanySettings#details');
+        }
+
         // Look & feel updates
         if (isset($params['primarycolor']) && $params['primarycolor'] != '') {
             $this->settingsRepo->saveSetting('companysettings.primarycolor', htmlentities(addslashes($params['primarycolor'])));
