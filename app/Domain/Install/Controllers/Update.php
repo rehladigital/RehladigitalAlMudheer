@@ -3,6 +3,7 @@
 namespace Leantime\Domain\Install\Controllers;
 
 use Illuminate\Contracts\Container\BindingResolutionException;
+use Illuminate\Http\Exceptions\HttpResponseException;
 use Leantime\Core\Configuration\AppSettings as AppSettingCore;
 use Leantime\Core\Controller\Controller;
 use Leantime\Core\Controller\Frontcontroller as FrontcontrollerCore;
@@ -90,6 +91,10 @@ class Update extends Controller
     {
         if (! $this->settingsRepo->checkIfInstalled()) {
             return;
+        }
+
+        if (! Auth::isLoggedIn()) {
+            throw new HttpResponseException(FrontcontrollerCore::redirect(BASE_URL.'/auth/login'));
         }
 
         Auth::authOrRedirect([Roles::$owner, Roles::$admin], true);
