@@ -90,6 +90,13 @@ Great news: this app is confirmed to run on Hostinger shared hosting (no root ac
 - OIDC start endpoint redirects to your provider
 - Successful login reaches `/dashboard/home`
 
+### One-command verification script
+
+- Run all checks:
+  - `SITE_URL=https://<your-domain> bash scripts/deploy-checklist.sh`
+- Include authenticated dashboard validation:
+  - `LOGIN_USERNAME=<email> LOGIN_PASSWORD=<password> SITE_URL=https://<your-domain> bash scripts/deploy-checklist.sh`
+
 ## Setup helper files
 
 - `composer.phar`: local Composer binary included for environments without a global Composer install.
