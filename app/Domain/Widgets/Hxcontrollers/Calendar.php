@@ -2,6 +2,7 @@
 
 namespace Leantime\Domain\Widgets\Hxcontrollers;
 
+use Illuminate\Support\Facades\Log;
 use Leantime\Core\Controller\HtmxController;
 use Leantime\Domain\Calendar\Repositories\Calendar as CalendarRepository;
 use Leantime\Domain\Projects\Services\Projects as ProjectService;
@@ -57,8 +58,16 @@ class Calendar extends HtmxController
 
     public function get()
     {
-
-        $this->tpl->assign('externalCalendars', $this->calendarRepo->getMyExternalCalendars(session('userdata.id')));
-        $this->tpl->assign('calendar', $this->calendarRepo->getCalendar(session('userdata.id')));
+        try {
+            $this->tpl->assign('externalCalendars', $this->calendarRepo->getMyExternalCalendars(session('userdata.id')));
+            $this->tpl->assign('calendar', $this->calendarRepo->getCalendar(session('userdata.id')));
+        } catch (\Throwable $e) {
+            Log::error('Failed to load dashboard calendar widget', [
+                'userId' => (int) (session('userdata.id') ?? 0),
+                'error' => $e->getMessage(),
+            ]);
+            $this->tpl->assign('externalCalendars', []);
+            $this->tpl->assign('calendar', []);
+        }
     }
 }

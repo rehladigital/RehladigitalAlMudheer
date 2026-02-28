@@ -46,7 +46,13 @@ class Timesheets extends Repository
             return $this->hasDepartmentAccessTables;
         }
 
-        $this->hasDepartmentAccessTables = Schema::hasTable('zp_org_project_departments') && Schema::hasTable('zp_org_user_departments');
+        $this->hasDepartmentAccessTables =
+            Schema::hasTable('zp_org_project_departments')
+            && Schema::hasTable('zp_org_user_departments')
+            && Schema::hasColumn('zp_org_project_departments', 'projectId')
+            && Schema::hasColumn('zp_org_project_departments', 'departmentId')
+            && Schema::hasColumn('zp_org_user_departments', 'userId')
+            && Schema::hasColumn('zp_org_user_departments', 'departmentId');
 
         return $this->hasDepartmentAccessTables;
     }

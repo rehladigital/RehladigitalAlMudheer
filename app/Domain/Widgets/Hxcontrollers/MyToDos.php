@@ -47,8 +47,24 @@ class MyToDos extends HtmxController
             $params['limit'] = $this->limit;
         }
 
-        // Get hierarchical tasks
-        $tplVars = $this->ticketsService->getToDoWidgetHierarchicalAssignments($params);
+        try {
+            // Get hierarchical tasks
+            $tplVars = $this->ticketsService->getToDoWidgetHierarchicalAssignments($params);
+        } catch (\Throwable $e) {
+            Log::error('Failed to load My ToDos widget', [
+                'userId' => (int) (session('userdata.id') ?? 0),
+                'error' => $e->getMessage(),
+            ]);
+            $tplVars = [
+                'tickets' => [],
+                'statusLabels' => [],
+                'allProjects' => [],
+                'allAssignedprojects' => [],
+                'projectFilter' => '',
+                'groupBy' => 'time',
+                'onTheClock' => false,
+            ];
+        }
 
         // Get user's personal sorting preferences
         $userId = session('userdata.id');
@@ -57,9 +73,7 @@ class MyToDos extends HtmxController
 
         $totalLoadedTickets = 0;
 
-        foreach ($tplVars['tickets'] as $ticketGroup) {
-            $totalLoadedTickets += collect($tplVars['tickets'])->countNested('tickets');
-        }
+        $totalLoadedTickets += collect($tplVars['tickets'] ?? [])->countNested('tickets');
 
         $hasMoreTickets = $totalLoadedTickets >= $params['limit'];
 
