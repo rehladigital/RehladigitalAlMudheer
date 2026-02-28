@@ -192,8 +192,8 @@ jobs:
           PROD_APP_URL: ${{ secrets.PROD_APP_URL }}
         run: |
           html=$(curl -k -L -s "$PROD_APP_URL/auth/login")
-          cssPath=$(echo "$html" | grep -oE '/dist/css/main\.[0-9]+\.[0-9]+\.[0-9]+\.min\.css' | head -n 1)
-          jsPath=$(echo "$html" | grep -oE '/dist/js/compiled-frameworks\.[0-9]+\.[0-9]+\.[0-9]+\.min\.js' | head -n 1)
+          cssPath=$(echo "$html" | grep -oE '/dist/css/main\.[0-9]+(\.[0-9]+){1,2}\.min\.css' | head -n 1)
+          jsPath=$(echo "$html" | grep -oE '/dist/js/compiled-frameworks\.[0-9]+(\.[0-9]+){1,2}\.min\.js' | head -n 1)
 
           if [ -z "$cssPath" ] || [ -z "$jsPath" ]; then
             echo "Could not detect versioned CSS/JS assets from login page"
