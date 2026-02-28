@@ -597,7 +597,11 @@ class Organization
 
     public function getUserClientIds(int $userId): array
     {
-        if (! Schema::hasTable('zp_org_user_clients')) {
+        if (
+            ! Schema::hasTable('zp_org_user_clients')
+            || ! Schema::hasColumn('zp_org_user_clients', 'userId')
+            || ! Schema::hasColumn('zp_org_user_clients', 'clientId')
+        ) {
             return [];
         }
 
@@ -610,7 +614,11 @@ class Organization
 
     public function getUserDepartmentIds(int $userId): array
     {
-        if (! Schema::hasTable('zp_org_user_departments')) {
+        if (
+            ! Schema::hasTable('zp_org_user_departments')
+            || ! Schema::hasColumn('zp_org_user_departments', 'userId')
+            || ! Schema::hasColumn('zp_org_user_departments', 'departmentId')
+        ) {
             return [];
         }
 
@@ -625,7 +633,11 @@ class Organization
     {
         $this->ensureRbacSchema();
 
-        if (! Schema::hasTable('zp_org_project_departments')) {
+        if (
+            ! Schema::hasTable('zp_org_project_departments')
+            || ! Schema::hasColumn('zp_org_project_departments', 'projectId')
+            || ! Schema::hasColumn('zp_org_project_departments', 'departmentId')
+        ) {
             return;
         }
 
@@ -641,7 +653,12 @@ class Organization
 
     public function getProjectDepartmentId(int $projectId): int
     {
-        if (! Schema::hasTable('zp_org_project_departments') || $projectId <= 0) {
+        if (
+            ! Schema::hasTable('zp_org_project_departments')
+            || ! Schema::hasColumn('zp_org_project_departments', 'projectId')
+            || ! Schema::hasColumn('zp_org_project_departments', 'departmentId')
+            || $projectId <= 0
+        ) {
             return 0;
         }
 

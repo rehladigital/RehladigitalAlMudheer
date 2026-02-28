@@ -110,11 +110,10 @@ class ShowProject extends Controller
             }
 
             $project = $this->projectRepo->getProject($id);
-            $project['departmentId'] = $this->organizationRepo->getProjectDepartmentId($id);
-
-            if (isset($project['id']) === false) {
+            if (! is_array($project) || isset($project['id']) === false) {
                 return FrontcontrollerCore::redirect(BASE_URL.'/errors/error404');
             }
+            $project['departmentId'] = $this->organizationRepo->getProjectDepartmentId($id);
 
             if (session('currentProject') != $project['id']) {
                 $this->projectService->changeCurrentSessionProject($project['id']);
