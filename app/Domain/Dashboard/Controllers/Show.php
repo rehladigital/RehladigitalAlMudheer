@@ -3,6 +3,7 @@
 namespace Leantime\Domain\Dashboard\Controllers;
 
 use Illuminate\Contracts\Container\BindingResolutionException;
+use Illuminate\Support\Facades\Log;
 use Leantime\Core\Controller\Controller;
 use Leantime\Core\Controller\Frontcontroller;
 use Leantime\Core\Controller\Frontcontroller as FrontcontrollerCore;
@@ -70,27 +71,40 @@ class Show extends Controller
      */
     public function get(): Response
     {
+        // Support legacy links that pass projectId on dashboard/show.
+        // This keeps navigation stable even if user has a stale currentProject in session.
+        if (isset($_GET['projectId']) && is_numeric($_GET['projectId'])) {
+            $requestedProjectId = (int) $_GET['projectId'];
+            if ($requestedProjectId > 0) {
+                if (! $this->projectService->changeCurrentSessionProject($requestedProjectId)) {
+                    $this->tpl->setNotification($this->language->__('notifications.project_not_found'), 'error');
+                    return FrontcontrollerCore::redirect(BASE_URL.'/dashboard/home');
+                }
+            }
+        }
+
         $currentProjectId = $this->projectService->getCurrentProjectId();
         if ($currentProjectId === 0) {
             return FrontcontrollerCore::redirect(BASE_URL.'/dashboard/home');
         }
 
-        $project = $this->projectService->getProject($currentProjectId);
-        if (isset($project['id']) === false) {
-            return FrontcontrollerCore::redirect(BASE_URL.'/dashboard/home');
-        }
+        try {
+            $project = $this->projectService->getProject($currentProjectId);
+            if (isset($project['id']) === false) {
+                return FrontcontrollerCore::redirect(BASE_URL.'/dashboard/home');
+            }
 
-        $projectRedirectFilter = self::dispatch_filter('dashboardRedirect', '/dashboard/show', ['type' => $project['type']]);
-        if ($projectRedirectFilter != '/dashboard/show') {
-            return FrontcontrollerCore::redirect(BASE_URL.$projectRedirectFilter);
-        }
+            $projectRedirectFilter = self::dispatch_filter('dashboardRedirect', '/dashboard/show', ['type' => $project['type']]);
+            if ($projectRedirectFilter != '/dashboard/show') {
+                return FrontcontrollerCore::redirect(BASE_URL.$projectRedirectFilter);
+            }
 
-        [$progressSteps, $percentDone] = $this->projectService->getProjectSetupChecklist($currentProjectId);
-        $this->tpl->assign('progressSteps', $progressSteps);
-        $this->tpl->assign('percentDone', $percentDone);
+            [$progressSteps, $percentDone] = $this->projectService->getProjectSetupChecklist($currentProjectId);
+            $this->tpl->assign('progressSteps', $progressSteps);
+            $this->tpl->assign('percentDone', $percentDone);
 
-        $project['assignedUsers'] = $this->projectService->getUsersAssignedToProject($currentProjectId);
-        $this->tpl->assign('project', $project);
+            $project['assignedUsers'] = $this->projectService->getUsersAssignedToProject($currentProjectId);
+            $this->tpl->assign('project', $project);
 
         $oidcEnabled = $this->settingsSvc->getSetting('companysettings.microsoftAuth.enabled');
         if ($oidcEnabled === false) {
@@ -150,15 +164,25 @@ class Show extends Controller
 
         $this->tpl->assign('completedOnboarding', $completedOnboarding);
 
-        // TICKETS
-        $this->tpl->assign('tickets', $this->ticketService->getLastTickets($currentProjectId));
-        $this->tpl->assign('onTheClock', $this->timesheetService->isClocked(session('userdata.id')));
-        $this->tpl->assign('efforts', $this->ticketService->getEffortLabels());
-        $this->tpl->assign('priorities', $this->ticketService->getPriorityLabels());
-        $this->tpl->assign('types', $this->ticketService->getTicketTypes());
-        $this->tpl->assign('statusLabels', $this->ticketService->getStatusLabels());
+            // TICKETS
+            $this->tpl->assign('tickets', $this->ticketService->getLastTickets($currentProjectId));
+            $this->tpl->assign('onTheClock', $this->timesheetService->isClocked(session('userdata.id')));
+            $this->tpl->assign('efforts', $this->ticketService->getEffortLabels());
+            $this->tpl->assign('priorities', $this->ticketService->getPriorityLabels());
+            $this->tpl->assign('types', $this->ticketService->getTicketTypes());
+            $this->tpl->assign('statusLabels', $this->ticketService->getStatusLabels());
 
-        return $this->tpl->display('dashboard.show');
+            return $this->tpl->display('dashboard.show');
+        } catch (\Throwable $e) {
+            Log::error('Failed to load project dashboard', [
+                'projectId' => $currentProjectId,
+                'userId' => (int) (session('userdata.id') ?? 0),
+                'error' => $e->getMessage(),
+            ]);
+            $this->projectService->resetCurrentProject();
+            $this->tpl->setNotification('Project context is invalid or inaccessible. Please select a project again.', 'error');
+            return FrontcontrollerCore::redirect(BASE_URL.'/dashboard/home');
+        }
     }
 
     /**
