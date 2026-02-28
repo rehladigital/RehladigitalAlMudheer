@@ -33,6 +33,7 @@ class Ideas
     private Tickets $ticketRepo;
 
     private DatabaseHelper $dbHelper;
+    private ?bool $hasDepartmentAccessTables = null;
 
     /**
      * __construct - get db connection
@@ -45,6 +46,17 @@ class Ideas
         $this->language = $language;
         $this->ticketRepo = $ticketRepo;
         $this->dbHelper = $dbHelper;
+    }
+
+    private function hasDepartmentAccessTables(): bool
+    {
+        if ($this->hasDepartmentAccessTables !== null) {
+            return $this->hasDepartmentAccessTables;
+        }
+
+        $this->hasDepartmentAccessTables = Schema::hasTable('zp_org_project_departments') && Schema::hasTable('zp_org_user_departments');
+
+        return $this->hasDepartmentAccessTables;
     }
 
     public function getSingleCanvas(int $canvasId): false|array
@@ -386,7 +398,7 @@ class Ideas
         $userId = session('userdata.id') ?? -1;
         $clientId = session('userdata.clientId') ?? -1;
         $requesterRole = session()->exists('userdata') ? session('userdata.role') : -1;
-        $hasDepartmentTables = Schema::hasTable('zp_org_project_departments') && Schema::hasTable('zp_org_user_departments');
+        $hasDepartmentTables = $this->hasDepartmentAccessTables();
 
         $query = $this->db->table('zp_canvas_items')
             ->select(

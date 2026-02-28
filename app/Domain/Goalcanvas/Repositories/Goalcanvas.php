@@ -65,11 +65,23 @@ class Goalcanvas extends Canvas
     ];
 
     protected ConnectionInterface $dbConnection;
+    private ?bool $hasDepartmentAccessTables = null;
 
     public function __construct(DbCore $db, LanguageCore $language, Tickets $ticketRepo, DatabaseHelper $dbHelper)
     {
         parent::__construct($db, $language, $ticketRepo, $dbHelper);
         $this->dbConnection = $db->getConnection();
+    }
+
+    private function hasDepartmentAccessTables(): bool
+    {
+        if ($this->hasDepartmentAccessTables !== null) {
+            return $this->hasDepartmentAccessTables;
+        }
+
+        $this->hasDepartmentAccessTables = Schema::hasTable('zp_org_project_departments') && Schema::hasTable('zp_org_user_departments');
+
+        return $this->hasDepartmentAccessTables;
     }
 
     /**
@@ -153,7 +165,7 @@ class Goalcanvas extends Canvas
         $userId = session('userdata.id') ?? -1;
         $clientId = session('userdata.clientId') ?? -1;
         $requesterRole = session()->exists('userdata') ? session('userdata.role') : -1;
-        $hasDepartmentTables = Schema::hasTable('zp_org_project_departments') && Schema::hasTable('zp_org_user_departments');
+        $hasDepartmentTables = $this->hasDepartmentAccessTables();
 
         $query = $this->dbConnection->table('zp_canvas_items')
             ->select(

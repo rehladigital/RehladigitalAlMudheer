@@ -34,6 +34,7 @@ class Projects
     public array $state = [0 => 'OPEN', 1 => 'CLOSED', null => 'OPEN'];
 
     private ConnectionInterface $connection;
+    private ?bool $hasDepartmentAccessTables = null;
 
     public function __construct(
         protected Environment $config,
@@ -44,6 +45,17 @@ class Projects
         $this->config = $config;
         $this->db = $db;
         $this->connection = $db->getConnection();
+    }
+
+    private function hasDepartmentAccessTables(): bool
+    {
+        if ($this->hasDepartmentAccessTables !== null) {
+            return $this->hasDepartmentAccessTables;
+        }
+
+        $this->hasDepartmentAccessTables = Schema::hasTable('zp_org_project_departments') && Schema::hasTable('zp_org_user_departments');
+
+        return $this->hasDepartmentAccessTables;
     }
 
     /**
@@ -250,7 +262,7 @@ class Projects
 
     public function getUsersByProjectDepartment(int $projectId): array
     {
-        if (! Schema::hasTable('zp_org_project_departments') || ! Schema::hasTable('zp_org_user_departments')) {
+        if (! $this->hasDepartmentAccessTables()) {
             return [];
         }
 
@@ -300,7 +312,7 @@ class Projects
 
     public function getUserProjects(int $userId, string $projectStatus = 'all', ?int $clientId = null, string $accessStatus = 'assigned', string $projectTypes = 'all'): false|array
     {
-        $hasDepartmentTables = Schema::hasTable('zp_org_project_departments') && Schema::hasTable('zp_org_user_departments');
+        $hasDepartmentTables = $this->hasDepartmentAccessTables();
 
         $query = $this->connection->table('zp_projects as project')
             ->select([
@@ -446,7 +458,7 @@ class Projects
     // This populates the projects show all tab and shows users all the projects that they could access
     public function getProjectsUserHasAccessTo($userId, string $status = 'all', string $clientId = ''): false|array
     {
-        $hasDepartmentTables = Schema::hasTable('zp_org_project_departments') && Schema::hasTable('zp_org_user_departments');
+        $hasDepartmentTables = $this->hasDepartmentAccessTables();
 
         $query = $this->connection->table('zp_projects as project')
             ->select([
@@ -976,7 +988,7 @@ class Projects
 
         // Everyone in department is allowed to see project
         if ($project['psettings'] === 'departments') {
-            $hasDepartmentTables = Schema::hasTable('zp_org_project_departments') && Schema::hasTable('zp_org_user_departments');
+            $hasDepartmentTables = $this->hasDepartmentAccessTables();
             $hasDepartmentAccess = $hasDepartmentTables
                 ? $this->connection->table('zp_org_project_departments as opd')
                     ->join('zp_org_user_departments as oud', 'oud.departmentId', '=', 'opd.departmentId')

@@ -9,10 +9,22 @@ use Leantime\Core\Db\Db as DbCore;
 class Comments
 {
     private ConnectionInterface $db;
+    private ?bool $hasDepartmentAccessTables = null;
 
     public function __construct(DbCore $db)
     {
         $this->db = $db->getConnection();
+    }
+
+    private function hasDepartmentAccessTables(): bool
+    {
+        if ($this->hasDepartmentAccessTables !== null) {
+            return $this->hasDepartmentAccessTables;
+        }
+
+        $this->hasDepartmentAccessTables = Schema::hasTable('zp_org_project_departments') && Schema::hasTable('zp_org_user_departments');
+
+        return $this->hasDepartmentAccessTables;
     }
 
     public function getComments(string $module, int $moduleId, int $parent = 0, string $orderByState = '0'): false|array
@@ -140,7 +152,7 @@ class Comments
         $userId = session('userdata.id') ?? -1;
         $clientId = session('userdata.clientId') ?? -1;
         $requesterRole = session()->exists('userdata') ? session('userdata.role') : -1;
-        $hasDepartmentTables = Schema::hasTable('zp_org_project_departments') && Schema::hasTable('zp_org_user_departments');
+        $hasDepartmentTables = $this->hasDepartmentAccessTables();
 
         $query = $this->db->table('zp_comment as comment')
             ->select(

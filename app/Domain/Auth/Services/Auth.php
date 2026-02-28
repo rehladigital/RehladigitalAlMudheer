@@ -445,7 +445,7 @@ class Auth implements Authenticatable
                     $actual_link = ''.BASE_URL.'/auth/resetPw/'.$resetLink;
                     $mailer->setHtml(sprintf($this->language->__('email_notifications.password_reset_message'), $actual_link));
                     $to = [$username];
-                    $mailer->sendMail($to, 'Leantime System');
+                    $mailer->sendMail($to, 'Al Mudheer Projects');
 
                     return true;
                 }

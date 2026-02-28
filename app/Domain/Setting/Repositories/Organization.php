@@ -207,6 +207,8 @@ class Organization
         }
 
         $seedRoles = [
+            ['name' => 'Owner', 'slug' => 'owner', 'systemRole' => 50, 'isProtected' => 1],
+            ['name' => 'Admin', 'slug' => 'admin', 'systemRole' => 40, 'isProtected' => 1],
             ['name' => 'Department Manager', 'slug' => 'department-manager', 'systemRole' => 30, 'isProtected' => 1],
             ['name' => 'Department Editor', 'slug' => 'department-editor', 'systemRole' => 20, 'isProtected' => 1],
             ['name' => 'Department Commentor', 'slug' => 'department-commentor', 'systemRole' => 10, 'isProtected' => 1],

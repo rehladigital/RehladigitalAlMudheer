@@ -2581,6 +2581,8 @@ class Install
             }
 
             $seedRoles = [
+                ['name' => 'Owner', 'slug' => 'owner', 'systemRole' => 50, 'isProtected' => 1],
+                ['name' => 'Admin', 'slug' => 'admin', 'systemRole' => 40, 'isProtected' => 1],
                 ['name' => 'Department Manager', 'slug' => 'department-manager', 'systemRole' => 30, 'isProtected' => 1],
                 ['name' => 'Department Editor', 'slug' => 'department-editor', 'systemRole' => 20, 'isProtected' => 1],
                 ['name' => 'Department Commentor', 'slug' => 'department-commentor', 'systemRole' => 10, 'isProtected' => 1],
@@ -2608,6 +2610,8 @@ class Install
                     $systemRole = (int) ($user->role ?? 20);
 
                     $slug = match (true) {
+                        $systemRole >= 50 => 'owner',
+                        $systemRole >= 40 => 'admin',
                         $systemRole >= 30 => 'department-manager',
                         $systemRole >= 20 => 'department-editor',
                         $systemRole >= 10 => 'department-commentor',
@@ -2658,6 +2662,8 @@ class Install
             }
 
             $requiredRoles = [
+                ['name' => 'Owner', 'slug' => 'owner', 'systemRole' => 50],
+                ['name' => 'Admin', 'slug' => 'admin', 'systemRole' => 40],
                 ['name' => 'Department Manager', 'slug' => 'department-manager', 'systemRole' => 30],
                 ['name' => 'Department Editor', 'slug' => 'department-editor', 'systemRole' => 20],
                 ['name' => 'Department Commentor', 'slug' => 'department-commentor', 'systemRole' => 10],
@@ -2680,7 +2686,7 @@ class Install
 
             $roleBySlug = [];
             $rows = $this->connection->table('zp_org_roles')
-                ->whereIn('slug', ['department-manager', 'department-editor', 'department-commentor', 'department-readonly'])
+                ->whereIn('slug', ['owner', 'admin', 'department-manager', 'department-editor', 'department-commentor', 'department-readonly'])
                 ->get(['id', 'slug']);
             foreach ($rows as $row) {
                 $roleBySlug[(string) $row->slug] = (int) $row->id;
@@ -2691,6 +2697,8 @@ class Install
                 $userId = (int) $user->id;
                 $systemRole = (int) ($user->role ?? 20);
                 $targetSlug = match (true) {
+                    $systemRole >= 50 => 'owner',
+                    $systemRole >= 40 => 'admin',
                     $systemRole >= 30 => 'department-manager',
                     $systemRole >= 20 => 'department-editor',
                     $systemRole >= 10 => 'department-commentor',
@@ -2705,7 +2713,7 @@ class Install
                 }
             }
 
-            $legacySlugs = ['owner', 'admin', 'manager', 'editor', 'commenter', 'readonly', 'company-manager'];
+            $legacySlugs = ['manager', 'editor', 'commenter', 'readonly', 'company-manager'];
             foreach ($legacySlugs as $slug) {
                 $legacyRole = $this->connection->table('zp_org_roles')->where('slug', $slug)->first();
                 if (! $legacyRole) {

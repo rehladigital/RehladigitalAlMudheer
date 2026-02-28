@@ -20,6 +20,7 @@ class Timesheets extends Repository
     private ConnectionInterface $db;
 
     private DatabaseHelper $dbHelper;
+    private ?bool $hasDepartmentAccessTables = null;
 
     public array $kind = [
         'GENERAL_BILLABLE' => 'label.general_billable',
@@ -37,6 +38,17 @@ class Timesheets extends Repository
     {
         $this->db = $db->getConnection();
         $this->dbHelper = $dbHelper;
+    }
+
+    private function hasDepartmentAccessTables(): bool
+    {
+        if ($this->hasDepartmentAccessTables !== null) {
+            return $this->hasDepartmentAccessTables;
+        }
+
+        $this->hasDepartmentAccessTables = Schema::hasTable('zp_org_project_departments') && Schema::hasTable('zp_org_user_departments');
+
+        return $this->hasDepartmentAccessTables;
     }
 
     /**
@@ -201,7 +213,7 @@ class Timesheets extends Repository
                 $userId = session('userdata.id') ?? '-1';
                 $clientId = session('userdata.clientId') ?? '-1';
                 $requesterRole = session()->exists('userdata') ? session('userdata.role') : -1;
-                $hasDepartmentTables = Schema::hasTable('zp_org_project_departments') && Schema::hasTable('zp_org_user_departments');
+                $hasDepartmentTables = $this->hasDepartmentAccessTables();
 
                 $q->whereIn('zp_tickets.projectId', function ($subquery) use ($userId) {
                     $subquery->select('projectId')

@@ -27,6 +27,7 @@ class Tickets
     private ConnectionInterface $connection;
 
     private DatabaseHelper $dbHelper;
+    private ?bool $hasDepartmentAccessTables = null;
 
     public array $statusClasses = ['3' => 'label-info', '1' => 'label-important', '4' => 'label-warning', '2' => 'label-warning', '0' => 'label-success', '-1' => 'label-default'];
 
@@ -87,6 +88,17 @@ class Tickets
      * @var bool
      */
     private int|bool $page = 0;
+
+    private function hasDepartmentAccessTables(): bool
+    {
+        if ($this->hasDepartmentAccessTables !== null) {
+            return $this->hasDepartmentAccessTables;
+        }
+
+        $this->hasDepartmentAccessTables = Schema::hasTable('zp_org_project_departments') && Schema::hasTable('zp_org_user_departments');
+
+        return $this->hasDepartmentAccessTables;
+    }
 
     /**
      * @var bool
@@ -265,7 +277,7 @@ class Tickets
     {
         $users = app()->make(Users::class);
         $user = $users->getUser($id);
-        $hasDepartmentTables = Schema::hasTable('zp_org_project_departments') && Schema::hasTable('zp_org_user_departments');
+        $hasDepartmentTables = $this->hasDepartmentAccessTables();
 
         $query = $this->connection->table('zp_tickets as ticket')
             ->select([
@@ -345,7 +357,7 @@ class Tickets
         $requestorId = session()->exists('userdata') ? session('userdata.id') : -1;
         $userId = $searchCriteria['currentUser'] ?? session('userdata.id') ?? '-1';
         $clientId = $searchCriteria['currentClient'] ?? session('userdata.clientId') ?? '-1';
-        $hasDepartmentTables = Schema::hasTable('zp_org_project_departments') && Schema::hasTable('zp_org_user_departments');
+        $hasDepartmentTables = $this->hasDepartmentAccessTables();
 
         $query = $this->connection->table('zp_tickets')
             ->select([
@@ -663,7 +675,7 @@ class Tickets
     {
         $requestorId = session()->exists('userdata') ? session('userdata.id') : -1;
         $clientId = session('userdata.clientId') ?? '-1';
-        $hasDepartmentTables = Schema::hasTable('zp_org_project_departments') && Schema::hasTable('zp_org_user_departments');
+        $hasDepartmentTables = $this->hasDepartmentAccessTables();
 
         $query = $this->connection->table('zp_tickets')
             ->select([
@@ -758,7 +770,7 @@ class Tickets
         $requestorId = session()->exists('userdata') ? session('userdata.id') : -1;
         $clientId = session('userdata.clientId') ?? '-1';
         $activeUserId = $userId ?? (session('userdata.id') ?? '-1');
-        $hasDepartmentTables = Schema::hasTable('zp_org_project_departments') && Schema::hasTable('zp_org_user_departments');
+        $hasDepartmentTables = $this->hasDepartmentAccessTables();
 
         $query = $this->connection->table('zp_tickets')
             ->select([
@@ -1096,7 +1108,7 @@ class Tickets
         $requestorId = session('userdata.id') ?? '-1';
         $userId = $searchCriteria['currentUser'] ?? session('userdata.id') ?? '-1';
         $clientId = $searchCriteria['currentClient'] ?? session('userdata.clientId') ?? '-1';
-        $hasDepartmentTables = Schema::hasTable('zp_org_project_departments') && Schema::hasTable('zp_org_user_departments');
+        $hasDepartmentTables = $this->hasDepartmentAccessTables();
 
         $query = $this->connection->table('zp_tickets')
             ->select([

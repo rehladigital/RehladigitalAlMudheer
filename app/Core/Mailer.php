@@ -50,6 +50,8 @@ class Mailer
 
     public bool $nl2br = true;
 
+    private string $defaultFromName = 'Al Mudheer Projects';
+
     /**
      * __construct - get configurations
      *
@@ -58,12 +60,20 @@ class Mailer
     public function __construct(Environment $config, Language $language, SettingRepository $settingsRepo)
     {
         $configuredFromEmail = (string) ($settingsRepo->getSetting('companysettings.smtp.fromEmail') ?: $config->email);
+        $configuredFromName = trim((string) ($settingsRepo->getSetting('companysettings.smtp.fromName') ?: ''));
+        $configuredSiteName = trim((string) ($settingsRepo->getSetting('companysettings.sitename') ?: ''));
 
         if ($configuredFromEmail != '') {
             $this->emailDomain = $configuredFromEmail;
         } else {
             $host = $_SERVER['HTTP_HOST'] ?? 'leantime';
             $this->emailDomain = 'no-reply@'.$host;
+        }
+
+        if ($configuredFromName !== '') {
+            $this->defaultFromName = $configuredFromName;
+        } elseif ($configuredSiteName !== '') {
+            $this->defaultFromName = $configuredSiteName.' Projects';
         }
 
         $this->emailDomain = self::dispatch_filter('fromEmail', $this->emailDomain, $this);
@@ -233,7 +243,7 @@ class Mailer
 
         $this->mailAgent->isHTML(true); // Set email format to HTML
 
-        $this->mailAgent->setFrom($this->emailDomain, $from.' (Leantime)');
+        $this->mailAgent->setFrom($this->emailDomain, $this->defaultFromName);
 
         $this->mailAgent->Subject = $this->subject;
 
