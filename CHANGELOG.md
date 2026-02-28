@@ -1,3 +1,133 @@
+# Version: 3.7.2 (Al Mudheer Hotfix Rollup)
+
+## Complete Commit Rollup (most recent first)
+- `f92572d` — Harden OIDC JIT provisioning to preserve existing mappings safely.
+  - Prevents default SSO mapping logic from overwriting existing user mappings and adds resilient role/department fallback lookups.
+- `f7638df` — Expose and persist SSO default org mappings in company settings.
+  - Adds Entra SSO default fields for org role/client/unit and wires them into OIDC provisioning using database name resolution.
+- `d65c296` — Fix ticket PATCH return value so priority and due-date updates succeed.
+  - Ensures Kanban priority and due-date edits return success correctly for non-status PATCH updates.
+- `0080154` — Fix My Kanban cross-project mode when currentProject is explicitly empty.
+  - Preserves explicit all-project intent when empty filter values are dropped by request parsing.
+- `e13dad9` — Enhance Kanban cards with project context and always-editable due date.
+  - Adds Project/Client/Department details to Kanban cards and keeps due date editable even when previously unset.
+- `6333372` — Fix My Kanban cross-project filtering dropping tasks from other projects.
+  - Aligns filter parameter handling so cross-project views do not collapse back to a single current project.
+- `237052f` — Restore original MyToDos layout and keep Blade parser-safe SVG guard.
+  - Reverts visual regression while retaining safe empty-state SVG handling.
+- `f4fe747` — Fix Blade compiler compatibility in MyToDos empty-state SVG block.
+  - Replaces single-line Blade `@php(...)` usage with compiler-safe block syntax.
+- `c04e3f0` — Fix MyToDos Blade parse failure causing perpetual dashboard loading skeleton.
+  - Resolves widget render failure that caused continuous loading placeholders.
+- `09ed821` — Fix showProject 500 for missing/inaccessible project records.
+  - Guards project lookups and hardens RBAC mapping access against partial schemas.
+- `53648b6` — Fix asset version fallback to prevent global unstyled pages.
+  - Adds runtime asset-version resolution so CSS/JS references fall back to valid bundles.
+- `a8df502` — Rollback CSS link change that altered dashboard header layout.
+  - Restores prior stylesheet loading behavior after layout regression.
+- `563ddef` — Hotfix roadmap 500 and Firefox CSS fallback handling.
+  - Prevents fatal errors when placeholder SVG assets are missing in roadmap/todo empty states.
+- `af44b30` — Hotfix undefined RBAC scope variables in ticket access queries.
+  - Fixes runtime `Undefined variable` errors inside nested ticket access closures causing dashboard hangs and project 500 responses.
+- `76d2e0c` — Hotfix language bootstrap resilience to prevent global load failures.
+  - Guards language cache/INI parsing so malformed localization data no longer crashes request initialization.
+- `a50a21a` — Hotfix current project bootstrap to avoid RBAC lockout crashes.
+  - Stops project bootstrap from throwing hard exceptions and adds safe fallback when no valid current project can be resolved.
+- `54616b1` — Hotfix project navigation to prevent 500 on project switch.
+  - Routes project card navigation through stable project-switch handling and improves dashboard project context recovery.
+- `090417e` — Harden dashboard widget loading against RBAC schema drift.
+  - Adds schema/column guards and graceful fallbacks for dashboard widgets when org department mapping schema is incomplete.
+- `fad6ef7` — Fix login throttling and enforce single-role dropdown mapping.
+  - Applies login throttle improvements and enforces one-role-per-user UI/handler consistency in user mapping.
+- `26e17e2` — Fix SQL errors when department tables are unavailable.
+  - Prevents ticket/role access queries from failing when department schema is missing.
+- `3c5f608` — Fix 500 errors in department access queries.
+  - Hardens department-access SQL paths used by dashboard and project views.
+
+## Operational Notes
+- Hotfixes were promoted through `develop -> prod -> main` to keep release state aligned.
+- Scope focused on production stability for login, dashboard load, roadmap rendering, Kanban visibility, and RBAC-driven project/ticket access.
+
+---
+
+## Full Repository-Wide Commit List (All Commits)
+
+- `04b6cf2` Initial import of Leantime source
+- `fa10702` Implement Microsoft SSO controls, offline hardening, and Rehla Digital branding.
+- `4536694` Refine Al Mudheer login branding and Microsoft SSO settings labels.
+- `222cda7` Finalize Al Mudheer branding and SSO-first login behavior.
+- `bc937a9` Update README with sponsor branding details.
+- `86b42c4` Add local bootstrap helper files for setup workflows.
+- `573de0a` Enhance README with sponsor and website details.
+- `2881652` Improve onboarding install flow, SSO profile mapping, and stability fixes.
+- `fe0b5b7` Update project funding links and install-time database defaults.
+- `945befd` Add Redirect URI display in Entra SSO settings.
+- `e65aa51` Add personal Kanban shortcut and owner-only Timesheets.
+- `a079fdc` Add sidebar My Kanban and stabilize cross-project task opening.
+- `af51a8b` Remove extra home header to eliminate dashboard whitespace.
+- `59d9baf` Add Hostinger Node deployment wrapper and startup scripts.
+- `6b2d3b5` Add Hostinger-friendly Node build lifecycle scripts.
+- `7006389` Simplify deployment for direct public_html hosting.
+- `e955077` Sanitize deployment documentation placeholders.
+- `d473022` Add one-command Hostinger deployment script.
+- `a1faf61` Restructure repo for Node migration baseline.
+- `4d4785c` Restore PHP app as primary runtime.
+- `cae2545` Document validated Hostinger shared-hosting deployment path.
+- `171e9b0` Add post-deploy verification checklist script.
+- `21b0c25` Merge pull request #1 from rehladigital/restore/php-full-app
+- `2d1ee66` Update README.md
+- `8a0fbdc` Remove AI-assistant artifacts and sanitize default secret-like values.
+- `5d21a1e` Add owner-only in-app version updater and release hardening updates.
+- `c13aaed` Merge restore/php-full-app into main for 1.0.0 release
+- `4a5de5a` Add Hostinger-safe updater flow and manager project controls.
+- `2b3df6e` Fix safe FTP sync script parameter handling.
+- `7e4b985` Keep only Git production deployment workflow after rollback.
+- `1923d62` Add one-time full deploy and DB update options for production stability.
+- `f1678f8` Finalize 2.10 admin hardening and RBAC documentation structure.
+- `4e9ef42` Implement full RBAC foundation, org mappings, SMTP admin tab, and scoped project creation.
+- `0c48675` Bump release docs to 2.11 for direct install package reference.
+- `d274da8` Move dynamic RBAC and Unit governance into User Management.
+- `ed43c11` Fix update gate loop and deduplicate user mapping roles.
+- `ad9104e` Merge develop into prod for release
+- `19795fc` Harden production deploy workflow against hanging SFTP sync.
+- `8765abb` Merge develop into prod for release
+- `05b68c7` Document 2.11.1 stability, RBAC cleanup, and deploy hardening.
+- `e82a937` Merge develop into prod for release
+- `32f838a` Release 3.00 with enforced RBAC and project ownership rules.
+- `24e92dd` Fix updater crash from invalid language cache payload.
+- `756dc8c` Fix prod RBAC mapping persistence and dashboard widget-cache resilience.
+- `d9cda0e` Fix blank role/unit options in user edit forms.
+- `5f9e1ce` Fix unit/role add not persisting despite success popup.
+- `4e838de` Release 3.50 with new-install and persistence stability fixes.
+- `e8fa10f` Fix prod asset smoke regex for 3.50 versioned bundles.
+- `d9ed313` Fix production UI asset loading for release 3.50.
+- `bc5ec36` Refresh README branding and split installation docs.
+- `4d649a4` Add department-wide project access scope across UI and permissions.
+- `b5e8551` Release 3.7 stability updates for roles, performance, and mail branding.
+- `3c5f608` Fix 500 errors in department access queries.
+- `26e17e2` Fix SQL errors when department tables are unavailable.
+- `fad6ef7` Fix login throttling and enforce single-role dropdown mapping.
+- `090417e` Harden dashboard widget loading against RBAC schema drift.
+- `54616b1` Hotfix project navigation to prevent 500 on project switch.
+- `a50a21a` Hotfix current project bootstrap to avoid RBAC lockout crashes.
+- `76d2e0c` Hotfix language bootstrap resilience to prevent global load failures.
+- `af44b30` Hotfix undefined RBAC scope variables in ticket access queries.
+- `563ddef` Hotfix roadmap 500 and Firefox CSS fallback handling.
+- `a8df502` Rollback CSS link change that altered dashboard header layout.
+- `53648b6` Fix asset version fallback to prevent global unstyled pages.
+- `09ed821` Fix showProject 500 for missing/inaccessible project records.
+- `c04e3f0` Fix MyToDos Blade parse failure causing perpetual dashboard loading skeleton.
+- `f4fe747` Fix Blade compiler compatibility in MyToDos empty-state SVG block.
+- `237052f` Restore original MyToDos layout and keep Blade parser-safe SVG guard.
+- `6333372` Fix My Kanban cross-project filtering dropping tasks from other projects.
+- `e13dad9` Enhance Kanban cards with project context and always-editable due date.
+- `0080154` Fix My Kanban cross-project mode when currentProject is explicitly empty.
+- `d65c296` Fix ticket PATCH return value so priority and due-date updates succeed.
+- `f7638df` Expose and persist SSO default org mappings in company settings.
+- `f92572d` Harden OIDC JIT provisioning to preserve existing mappings safely.
+
+---
+
 # Version: 3.50 (Al Mudheer)
 
 ## New Install and Setup Stability
