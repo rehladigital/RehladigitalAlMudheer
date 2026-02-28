@@ -71,7 +71,10 @@ if ($roadmapView == 'Day') {
         ) {
             echo "<div class='empty' id='emptySprint' style='text-align:center;'>";
             echo "<div style='width:30%' class='svgContainer'>";
-            echo file_get_contents(ROOT.'/dist/images/svg/undraw_adjustments_p22m.svg');
+            $emptyRoadmapSvg = ROOT.'/dist/images/svg/undraw_adjustments_p22m.svg';
+            if (is_file($emptyRoadmapSvg)) {
+                echo file_get_contents($emptyRoadmapSvg);
+            }
             echo '</div>';
             echo '
             <h4>'.$tpl->__('headlines.no_tickets').'<br /></h4></div>';

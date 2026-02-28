@@ -156,7 +156,10 @@
 
                 <div class='center'>
                     <div style='width:30%' class='svgContainer'>
-                        {!! file_get_contents(ROOT . "/dist/images/svg/undraw_a_moment_to_relax_bbpa.svg") !!}
+                        @php($emptyTodoSvg = ROOT . "/dist/images/svg/undraw_a_moment_to_relax_bbpa.svg")
+                        @if(is_file($emptyTodoSvg))
+                            {!! file_get_contents($emptyTodoSvg) !!}
+                        @endif
                     </div>
                     <br/>
                     <h4>{{ __("text.no_tasks_assigned") }}</h4>
