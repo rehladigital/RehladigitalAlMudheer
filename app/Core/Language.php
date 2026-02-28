@@ -224,6 +224,9 @@ class Language
         }
 
         $mainLanguageArray = parse_ini_file(static::DEFAULT_LANG_FOLDER.'en-US.ini', false, INI_SCANNER_RAW);
+        if (! is_array($mainLanguageArray)) {
+            $mainLanguageArray = [];
+        }
 
         foreach (
             $languageFiles = self::dispatchFilter('language_files', [
@@ -240,13 +243,14 @@ class Language
             $mainLanguageArray = $this->includeOverrides($mainLanguageArray, $language_file, $isForeign);
         }
 
-        $this->ini_array = self::dispatchFilter(
+        $filteredLanguage = self::dispatchFilter(
             'language_resources',
             $mainLanguageArray,
             [
                 'language' => $this->language,
             ]
         );
+        $this->ini_array = is_array($filteredLanguage) ? $filteredLanguage : $mainLanguageArray;
 
         Cache::store('installation')->set('languages.lang_'.$this->language, $this->ini_array);
 
@@ -276,7 +280,11 @@ class Language
         $ini_overrides = parse_ini_file($filepath, false, INI_SCANNER_RAW);
 
         if (! is_array($ini_overrides)) {
-            throw new Exception("Could not parse ini file $filepath");
+            logger()->warning('Could not parse language ini file, skipping override', [
+                'file' => $filepath,
+                'language' => $this->language,
+            ]);
+            return $language;
         }
 
         foreach ($ini_overrides as $languageKey => $languageValue) {
