@@ -252,6 +252,11 @@ class Tickets
             'groupBy' => '',
         ];
 
+        // Backward compatibility: older UI/query builders still send projectId.
+        if (isset($searchParams['projectId']) === true && isset($searchParams['currentProject']) === false) {
+            $searchParams['currentProject'] = $searchParams['projectId'];
+        }
+
         // Isset is all we want to do since empty values are valid
         if (isset($searchParams['currentProject']) === true) {
             $searchCriteria['currentProject'] = $searchParams['currentProject'];

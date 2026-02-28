@@ -1162,7 +1162,7 @@ leantime.ticketsController = (function () {
 
             var query = "?search=true";
             if (project != "" && project != undefined) {
-                query = query + "&projectId=" + project}
+                query = query + "&currentProject=" + project}
             if (users != "" && users != undefined) {
                 query = query + "&users=" + users}
             if (milestones != ""  && milestones != undefined) {
@@ -1206,7 +1206,7 @@ leantime.ticketsController = (function () {
 
             var query = "?search=true";
         if (project != "" && project != undefined) {
-            query = query + "&projectId=" + project}
+            query = query + "&currentProject=" + project}
         if (users != "" && users != undefined) {
             query = query + "&users=" + users}
         if (milestones != ""  && milestones != undefined) {
