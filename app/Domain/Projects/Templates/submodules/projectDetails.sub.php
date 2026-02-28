@@ -140,22 +140,48 @@ $menuTypes = $tpl->get('menuTypes');
                     <div class="col-md-12 " style="margin-bottom: 30px;">
                     <h4 class="widgettitle title-light"><span
                             class="fa fa-building"></span><?php echo $tpl->__('label.client_product'); ?></h4>
-                    <select name="clientId" id="clientId">
-
+                    <div id="clientId" style="max-height:180px; overflow:auto; border:1px solid #ddd; padding:8px;">
                         <?php foreach ($tpl->get('clients') as $row) { ?>
-                            <option value="<?php echo $row['id']; ?>"
-                                <?php if ($project['clientId'] == $row['id']) {
-                                    ?> selected=selected
-                                <?php } ?>><?php $tpl->e($row['name']); ?></option>
+                            <?php $clientId = (int) ($row['id'] ?? 0); ?>
+                            <label style="display:block; font-weight:normal;">
+                                <input type="checkbox"
+                                       class="single-client-checkbox"
+                                       name="clientId[]"
+                                       value="<?php echo $clientId; ?>"
+                                    <?php if ((int) ($project['clientId'] ?? 0) === $clientId) { ?>
+                                        checked="checked"
+                                    <?php } ?> />
+                                <?php $tpl->e($row['name']); ?>
+                            </label>
                         <?php } ?>
-
-                    </select>
+                    </div>
                     <?php if ($login::userIsAtLeast('manager')) { ?>
                         <br /><a href="<?= BASE_URL?>/clients/newClient" target="_blank"><?= $tpl->__('label.client_not_listed'); ?></a>
                     <?php } ?>
 
 
                 </div>
+                </div>
+
+                <div class="row" style="margin-bottom: 30px;">
+                    <div class="col-md-12 " style="margin-bottom: 30px;">
+                        <h4 class="widgettitle title-light"><span class="fa fa-diagram-project"></span> Unit</h4>
+                        <div id="departmentId" style="max-height:180px; overflow:auto; border:1px solid #ddd; padding:8px;">
+                            <?php foreach (($tpl->get('availableDepartments') ?? []) as $department) { ?>
+                                <?php $departmentId = (int) ($department['id'] ?? 0); ?>
+                                <label style="display:block; font-weight:normal;">
+                                    <input type="checkbox"
+                                           class="single-department-checkbox"
+                                           name="departmentId[]"
+                                           value="<?php echo $departmentId; ?>"
+                                        <?php if ((int) ($project['departmentId'] ?? 0) === $departmentId) { ?>
+                                            checked="checked"
+                                        <?php } ?> />
+                                    <?php $tpl->e($department['name']); ?>
+                                </label>
+                            <?php } ?>
+                        </div>
+                    </div>
                 </div>
 
 
@@ -233,3 +259,19 @@ $menuTypes = $tpl->get('menuTypes');
 
 
 </form>
+
+<script>
+    jQuery(function() {
+        jQuery('.single-client-checkbox').on('change', function() {
+            if (this.checked) {
+                jQuery('.single-client-checkbox').not(this).prop('checked', false);
+            }
+        });
+
+        jQuery('.single-department-checkbox').on('change', function() {
+            if (this.checked) {
+                jQuery('.single-department-checkbox').not(this).prop('checked', false);
+            }
+        });
+    });
+</script>

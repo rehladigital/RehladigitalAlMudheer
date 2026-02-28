@@ -1,3 +1,22 @@
+# Version: 3.00 (Al Mudheer)
+
+## RBAC and Mapping Execution
+- Consolidated User Management into a single editable users table.
+- Converted all user/client/unit/role mappings to checkbox-based selection UX.
+- Enforced one role per user while preserving multi-client and multi-unit membership.
+- Added role-name uniqueness validation to prevent duplicate global roles.
+
+## Project Ownership Rule Enforcement
+- Project create/edit now enforce exactly one client and one unit (department) per project.
+- Converted project client/unit pickers to checkbox UI with single-select behavior.
+- Persisted project-to-department mapping consistently in both create and edit flows.
+
+## Stability and Performance
+- Hardened mapping save validation to prevent invalid multi-role payloads.
+- Optimized role uniqueness lookup to a direct indexed-style query (`exists`) instead of full table scan.
+
+---
+
 # Version: 2.11.1 (Al Mudheer)
 
 ## Stability & Upgrade Fixes

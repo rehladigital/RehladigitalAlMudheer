@@ -99,10 +99,13 @@ class NewProject extends Controller
 
             $mailer = app()->make(MailerCore::class);
 
+            $selectedClientIds = array_values(array_unique(array_map('intval', (array) ($_POST['clientId'] ?? []))));
+            $selectedDepartmentIds = array_values(array_unique(array_map('intval', (array) ($_POST['departmentId'] ?? []))));
+
             $values = [
                 'name' => $_POST['name'] ?? '',
                 'details' => $_POST['details'] ?? '',
-                'clientId' => (int) ($_POST['clientId'] ?? 0),
+                'clientId' => (int) ($selectedClientIds[0] ?? 0),
                 'hourBudget' => $hourBudget,
                 'assignedUsers' => $assignedUsers,
                 'dollarBudget' => $_POST['dollarBudget'] ?? 0,
@@ -113,7 +116,7 @@ class NewProject extends Controller
                 'parent' => $_POST['parent'] ?? '',
                 'start' => format(value: $_POST['start'], fromFormat: FromFormat::UserDateStartOfDay)->isoDateTime(),
                 'end' => $_POST['end'] ? format(value: $_POST['end'], fromFormat: FromFormat::UserDateEndOfDay)->isoDateTime() : '',
-                'departmentId' => (int) ($_POST['departmentId'] ?? 0),
+                'departmentId' => (int) ($selectedDepartmentIds[0] ?? 0),
             ];
 
             $userRole = (string) (session('userdata.role') ?? '');
@@ -121,10 +124,15 @@ class NewProject extends Controller
             if ($userRole === Roles::$manager && $currentUserClientId > 0) {
                 // Client manager should always create projects under their assigned client.
                 $values['clientId'] = $currentUserClientId;
+                $selectedClientIds = [$currentUserClientId];
             }
 
             if ($values['name'] === '') {
                 $this->tpl->setNotification($this->language->__('notification.no_project_name'), 'error');
+            } elseif (count($selectedClientIds) !== 1) {
+                $this->tpl->setNotification('Select exactly one client.', 'error');
+            } elseif (count($selectedDepartmentIds) !== 1) {
+                $this->tpl->setNotification('Select exactly one unit.', 'error');
             } elseif ((int) $values['clientId'] <= 0) {
                 $this->tpl->setNotification($this->language->__('notification.no_client'), 'error');
             } else {

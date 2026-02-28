@@ -51,7 +51,7 @@ class ShowAll extends Controller
             }
 
             $roles = $this->organizationRepo->getRoles();
-            $mappingRoles = $this->organizationRepo->getDepartmentRoles();
+            $mappingRoles = $roles;
             $units = $this->organizationRepo->getDepartments();
             $userRoleMap = $this->organizationRepo->getUserRoleMap();
             $userClientMap = $this->organizationRepo->getUserClientMap();
@@ -115,6 +115,8 @@ class ShowAll extends Controller
             $systemRole = (int) ($params['roleSystemRole'] ?? 20);
             if ($name === '') {
                 $this->tpl->setNotification('Role name is required.', 'error');
+            } elseif ($this->organizationRepo->roleNameExists($name)) {
+                $this->tpl->setNotification('Role name must be unique.', 'error');
             } else {
                 $this->organizationRepo->addRole($name, $systemRole);
                 $this->tpl->setNotification('Role added successfully.', 'success');
@@ -147,7 +149,20 @@ class ShowAll extends Controller
 
         if (isset($params['saveUserMappings'])) {
             try {
-                $roleByUser = (array) ($params['userBusinessRole'] ?? []);
+                $rawRoleByUser = (array) ($params['userBusinessRole'] ?? []);
+                $roleByUser = [];
+                foreach ($rawRoleByUser as $userId => $roleSelection) {
+                    $selected = array_values(array_filter(array_map('intval', (array) $roleSelection)));
+                    if (count($selected) > 1) {
+                        $this->tpl->setNotification('Each user can only have one role.', 'error');
+
+                        return Frontcontroller::redirect($redirectTo);
+                    }
+                    if (count($selected) === 1) {
+                        $roleByUser[(int) $userId] = $selected[0];
+                    }
+                }
+
                 $clientsByUser = (array) ($params['userClients'] ?? []);
                 $unitsByUser = (array) ($params['userUnits'] ?? []);
                 $this->organizationRepo->saveUserAccessMappings($roleByUser, $clientsByUser, $unitsByUser);

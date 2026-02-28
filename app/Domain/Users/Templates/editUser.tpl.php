@@ -94,15 +94,18 @@ $mappedUnitIds = $orgUserUnitMap[(int) ($values['id'] ?? 0)] ?? [];
 
 
 
-                    <label for="userClients"><?php echo $tpl->__('label.client') ?>s</label>
-                    <select name='userClients[]' id="userClients" multiple="multiple">
+                    <label><?php echo $tpl->__('label.client') ?>s</label>
+                    <div id="userClients" style="max-height:180px; overflow:auto; border:1px solid #ddd; padding:8px;">
                         <?php foreach ($tpl->get('clients') as $client) { ?>
                             <?php $clientId = (int) ($client['id'] ?? 0); ?>
-                            <option value="<?php echo $clientId ?>" <?php if (in_array($clientId, $mappedClientIds, true) || $clientId === (int) $values['clientId']) { ?>
-                                selected="selected"<?php
-                            } ?>><?php $tpl->e($client['name']) ?></option>
+                            <label style="display:block; font-weight:normal;">
+                                <input type="checkbox" name="userClients[]" value="<?php echo $clientId ?>" <?php if (in_array($clientId, $mappedClientIds, true) || $clientId === (int) $values['clientId']) { ?>
+                                    checked="checked"<?php
+                                } ?> />
+                                <?php $tpl->e($client['name']) ?>
+                            </label>
                         <?php } ?>
-                    </select><br/>
+                    </div><br/>
                         <br/>
 
                         <h4 class="widgettitle title-light"><?php echo $tpl->__('label.contact_information'); ?></h4>
@@ -122,15 +125,16 @@ $mappedUnitIds = $orgUserUnitMap[(int) ($values['id'] ?? 0)] ?? [];
                         <label for="jobLevel"><?php echo $tpl->__('label.jobLevel'); ?></label> <input
                             type="text" name="jobLevel" id="jobLevel" value="<?php echo $tpl->escape($values['jobLevel']) ?>" /><br />
 
-                        <label for="userUnits">Units</label>
-                        <select name="userUnits[]" id="userUnits" multiple="multiple">
+                        <label>Units</label>
+                        <div id="userUnits" style="max-height:180px; overflow:auto; border:1px solid #ddd; padding:8px;">
                             <?php foreach (($tpl->get('orgUnits') ?? []) as $unit) { ?>
                                 <?php $unitId = (int) ($unit['id'] ?? 0); ?>
-                                <option value="<?= $unitId ?>" <?= in_array($unitId, $mappedUnitIds, true) ? 'selected="selected"' : '' ?>>
+                                <label style="display:block; font-weight:normal;">
+                                    <input type="checkbox" name="userUnits[]" value="<?= $unitId ?>" <?= in_array($unitId, $mappedUnitIds, true) ? 'checked="checked"' : '' ?> />
                                     <?= $tpl->escape((string) ($unit['name'] ?? '')) ?>
-                                </option>
+                                </label>
                             <?php } ?>
-                        </select><br />
+                        </div><br />
 
 
 

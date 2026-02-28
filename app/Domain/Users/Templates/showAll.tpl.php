@@ -40,8 +40,12 @@ $orgRoleNamesByUser = $tpl->get('orgRoleNamesByUser') ?? [];
             </div>
         </div>
 
-        <table class="table table-bordered" id="allUsersTable">
+        <form method="post" action="<?= BASE_URL ?>/users/showAll#rbacUnitManagement">
+            <input type="hidden" name="saveUserMappings" value="1" />
+            <table class="table table-bordered" id="allUsersTable">
             <colgroup>
+                <col class="con1">
+                <col class="con0">
                 <col class="con1">
                 <col class="con0">
                 <col class="con1">
@@ -54,8 +58,9 @@ $orgRoleNamesByUser = $tpl->get('orgRoleNamesByUser') ?? [];
                 <tr>
                     <th class='head1'><?php echo $tpl->__('label.name'); ?></th>
                     <th class='head0'><?php echo $tpl->__('label.email'); ?></th>
-                    <th class='head1'><?php echo $tpl->__('label.client'); ?></th>
-                    <th class='head1'><?php echo $tpl->__('label.role'); ?></th>
+                    <th class='head1'>Department Role</th>
+                    <th class='head1'>Units</th>
+                    <th class='head1'>Clients</th>
                     <th class='head1'><?php echo $tpl->__('label.status'); ?></th>
                     <th class='head1'><?php echo $tpl->__('headlines.twoFA'); ?></th>
                     <th class='head0 no-sort'></th>
@@ -68,16 +73,45 @@ $orgRoleNamesByUser = $tpl->get('orgRoleNamesByUser') ?? [];
                              <a href="<?= BASE_URL ?>/users/editUser/<?= $row['id']?>"><?= sprintf($tpl->__('text.full_name'), $tpl->escape($row['firstname']), $tpl->escape($row['lastname'])); ?></a>
                         </td>
                         <td><a href="<?= BASE_URL ?>/users/editUser/<?= $row['id']?>"><?= $tpl->escape($row['username']); ?></a></td>
-                        <td><?= $tpl->escape($row['clientName']); ?></td>
                         <td>
-                            <?php
-                                $businessRole = $orgRoleNamesByUser[(int) $row['id']] ?? '';
-                                if ($businessRole !== '') {
-                                    echo $tpl->escape($businessRole);
-                                } else {
-                                    echo $tpl->__('label.roles.'.$roles[$row['role']]);
-                                }
-                            ?>
+                            <?php $userId = (int) $row['id']; ?>
+                            <?php $mappedRoleId = (int) ($orgUserRoleMap[$userId] ?? 0); ?>
+                            <?php foreach ($orgMappingRoles as $role) { ?>
+                                <?php $roleId = (int) ($role['id'] ?? 0); ?>
+                                <label style="display:block; margin-bottom:2px; font-weight:normal;">
+                                    <input type="checkbox"
+                                           name="userBusinessRole[<?= $userId ?>][]"
+                                           value="<?= $roleId ?>"
+                                           <?= $mappedRoleId === $roleId ? 'checked="checked"' : '' ?> />
+                                    <?= $tpl->escape((string) ($role['name'] ?? '')) ?>
+                                </label>
+                            <?php } ?>
+                        </td>
+                        <td>
+                            <?php $mappedUnitIds = $orgUserUnitMap[$userId] ?? []; ?>
+                            <?php foreach ($orgUnits as $unit) { ?>
+                                <?php $unitId = (int) ($unit['id'] ?? 0); ?>
+                                <label style="display:block; margin-bottom:2px; font-weight:normal;">
+                                    <input type="checkbox"
+                                           name="userUnits[<?= $userId ?>][]"
+                                           value="<?= $unitId ?>"
+                                           <?= in_array($unitId, $mappedUnitIds, true) ? 'checked="checked"' : '' ?> />
+                                    <?= $tpl->escape((string) ($unit['name'] ?? '')) ?>
+                                </label>
+                            <?php } ?>
+                        </td>
+                        <td>
+                            <?php $mappedClientIds = $orgUserClientMap[$userId] ?? []; ?>
+                            <?php foreach ($orgClients as $client) { ?>
+                                <?php $clientId = (int) ($client['id'] ?? 0); ?>
+                                <label style="display:block; margin-bottom:2px; font-weight:normal;">
+                                    <input type="checkbox"
+                                           name="userClients[<?= $userId ?>][]"
+                                           value="<?= $clientId ?>"
+                                           <?= in_array($clientId, $mappedClientIds, true) ? 'checked="checked"' : '' ?> />
+                                    <?= $tpl->escape((string) ($client['name'] ?? '')) ?>
+                                </label>
+                            <?php } ?>
                         </td>
                         <td><?php if (strtolower($row['status']) == 'a') {
                             echo $tpl->__('label.active');
@@ -95,7 +129,9 @@ $orgRoleNamesByUser = $tpl->get('orgRoleNamesByUser') ?? [];
                     </tr>
             <?php } ?>
             </tbody>
-        </table>
+            </table>
+            <button type="submit" class="btn btn-primary">Save Mappings</button>
+        </form>
 
         <div id="rbacUnitManagement" style="margin-top:20px;">
             <h4 class="widgettitle title-light"><span class="fa fa-sitemap"></span> Unit and Role Management</h4>
@@ -182,70 +218,7 @@ $orgRoleNamesByUser = $tpl->get('orgRoleNamesByUser') ?? [];
                 </div>
             </div>
 
-            <div class="row">
-                <div class="col-md-12">
-                    <h5 class="widgettitle title-light"><span class="fa fa-users-gear"></span> User Role and Client Mapping</h5>
-                    <p style="margin-top:-8px; color:#666;">Department roles are limited to the four predefined global roles.</p>
-                    <form method="post" action="<?= BASE_URL ?>/users/showAll#rbacUnitManagement">
-                        <input type="hidden" name="saveUserMappings" value="1" />
-                        <table class="table table-bordered table-striped">
-                            <thead>
-                                <tr>
-                                    <th>User</th>
-                                    <th>Department Role</th>
-                                    <th>Units</th>
-                                    <th>Clients</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach ($orgUsers as $user) { ?>
-                                    <?php
-                                        $userId = (int) ($user['id'] ?? 0);
-                                        $mappedRoleId = (int) ($orgUserRoleMap[$userId] ?? 0);
-                                        $mappedUnitIds = $orgUserUnitMap[$userId] ?? [];
-                                        $mappedClientIds = $orgUserClientMap[$userId] ?? [];
-                                    ?>
-                                    <tr>
-                                        <td><?= $tpl->escape((string) (($user['firstname'] ?? '').' '.($user['lastname'] ?? '').' <'.($user['username'] ?? '').'>')) ?></td>
-                                        <td>
-                                            <select name="userBusinessRole[<?= $userId ?>]" style="width:220px;">
-                                                <option value="">-- Select role --</option>
-                                                <?php foreach ($orgMappingRoles as $role) { ?>
-                                                    <?php $roleId = (int) ($role['id'] ?? 0); ?>
-                                                    <option value="<?= $roleId ?>" <?= $mappedRoleId === $roleId ? 'selected="selected"' : '' ?>>
-                                                        <?= $tpl->escape((string) ($role['name'] ?? '')) ?>
-                                                    </option>
-                                                <?php } ?>
-                                            </select>
-                                        </td>
-                                        <td>
-                                            <select name="userUnits[<?= $userId ?>][]" multiple="multiple" style="width:240px;">
-                                                <?php foreach ($orgUnits as $unit) { ?>
-                                                    <?php $unitId = (int) ($unit['id'] ?? 0); ?>
-                                                    <option value="<?= $unitId ?>" <?= in_array($unitId, $mappedUnitIds, true) ? 'selected="selected"' : '' ?>>
-                                                        <?= $tpl->escape((string) ($unit['name'] ?? '')) ?>
-                                                    </option>
-                                                <?php } ?>
-                                            </select>
-                                        </td>
-                                        <td>
-                                            <select name="userClients[<?= $userId ?>][]" multiple="multiple" style="width:240px;">
-                                                <?php foreach ($orgClients as $client) { ?>
-                                                    <?php $clientId = (int) ($client['id'] ?? 0); ?>
-                                                    <option value="<?= $clientId ?>" <?= in_array($clientId, $mappedClientIds, true) ? 'selected="selected"' : '' ?>>
-                                                        <?= $tpl->escape((string) ($client['name'] ?? '')) ?>
-                                                    </option>
-                                                <?php } ?>
-                                            </select>
-                                        </td>
-                                    </tr>
-                                <?php } ?>
-                            </tbody>
-                        </table>
-                        <button type="submit" class="btn btn-primary">Save Mappings</button>
-                    </form>
-                </div>
-            </div>
+            
         </div>
     </div>
 </div>

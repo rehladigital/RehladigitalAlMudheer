@@ -98,18 +98,21 @@ $projects = $tpl->get('relations');
                 <?php } ?>
             </select> <br />
 
-            <label for="userClients"><?php echo $tpl->__('label.client') ?>s</label>
-            <select name='userClients[]' id="userClients" multiple="multiple">
+            <label><?php echo $tpl->__('label.client') ?>s</label>
+            <div id="userClients" style="max-height:180px; overflow:auto; border:1px solid #ddd; padding:8px;">
                 <?php foreach ($tpl->get('clients') as $client) { ?>
                     <?php if ($login::userHasRole(\Leantime\Domain\Auth\Models\Roles::$manager) && $client['id'] !== session('userdata.clientId')) {
                         continue;
                     } ?>
-                    <option value="<?php echo $client['id'] ?>"
+                    <label style="display:block; font-weight:normal;">
+                        <input type="checkbox" name="userClients[]" value="<?php echo (int) $client['id'] ?>"
                             <?php if ($client['id'] == $values['clientId'] || $tpl->get('preSelectedClient') == $client['id']) { ?>
-                                selected="selected"
-                            <?php } ?>><?php $tpl->e($client['name']) ?></option>
+                                checked="checked"
+                            <?php } ?> />
+                        <?php $tpl->e($client['name']) ?>
+                    </label>
                 <?php } ?>
-            </select><br/>
+            </div><br/>
             <br/>
 
 
@@ -131,12 +134,15 @@ $projects = $tpl->get('relations');
                 <label for="jobLevel"><?php echo $tpl->__('label.jobLevel'); ?></label> <input
                     type="text" name="jobLevel" id="jobLevel" value="<?php echo $values['jobLevel'] ?>" /><br />
 
-                <label for="userUnits">Units</label>
-                <select name="userUnits[]" id="userUnits" multiple="multiple">
+                <label>Units</label>
+                <div id="userUnits" style="max-height:180px; overflow:auto; border:1px solid #ddd; padding:8px;">
                     <?php foreach (($tpl->get('orgUnits') ?? []) as $unit) { ?>
-                        <option value="<?php echo (int) $unit['id']; ?>"><?php $tpl->e($unit['name']); ?></option>
+                        <label style="display:block; font-weight:normal;">
+                            <input type="checkbox" name="userUnits[]" value="<?php echo (int) $unit['id']; ?>" />
+                            <?php $tpl->e($unit['name']); ?>
+                        </label>
                     <?php } ?>
-                </select><br />
+                </div><br />
 
 
                     <p class="stdformbutton">

@@ -17,6 +17,7 @@ use Leantime\Domain\Menu\Repositories\Menu as MenuRepository;
 use Leantime\Domain\Notifications\Models\Notification;
 use Leantime\Domain\Projects\Repositories\Projects as ProjectRepository;
 use Leantime\Domain\Projects\Services\Projects as ProjectService;
+use Leantime\Domain\Setting\Repositories\Organization as OrganizationRepository;
 use Leantime\Domain\Setting\Repositories\Setting as SettingRepository;
 use Leantime\Domain\Tickets\Services\Tickets as TicketService;
 use Leantime\Domain\Users\Repositories\Users as UserRepository;
@@ -47,6 +48,8 @@ class ShowProject extends Controller
 
     private MenuRepository $menuRepo;
 
+    private OrganizationRepository $organizationRepo;
+
     /**
      * init - initialize private variables
      */
@@ -61,7 +64,8 @@ class ShowProject extends Controller
         ClientRepository $clientsRepo,
         FileRepository $fileRepo,
         CommentRepository $commentsRepo,
-        MenuRepository $menuRepo
+        MenuRepository $menuRepo,
+        OrganizationRepository $organizationRepo
     ) {
 
         Auth::authOrRedirect([Roles::$owner, Roles::$admin, Roles::$manager]);
@@ -80,6 +84,7 @@ class ShowProject extends Controller
         $this->fileRepo = $fileRepo;
         $this->commentsRepo = $commentsRepo;
         $this->menuRepo = $menuRepo;
+        $this->organizationRepo = $organizationRepo;
 
         if (! session()->exists('lastPage')) {
             session(['lastPage' => CURRENT_URL]);
@@ -105,6 +110,7 @@ class ShowProject extends Controller
             }
 
             $project = $this->projectRepo->getProject($id);
+            $project['departmentId'] = $this->organizationRepo->getProjectDepartmentId($id);
 
             if (isset($project['id']) === false) {
                 return FrontcontrollerCore::redirect(BASE_URL.'/errors/error404');
@@ -226,11 +232,14 @@ class ShowProject extends Controller
 
             // save changed project data
             if (isset($_POST['save']) === true) {
+                $selectedClientIds = array_values(array_unique(array_map('intval', (array) ($_POST['clientId'] ?? []))));
+                $selectedDepartmentIds = array_values(array_unique(array_map('intval', (array) ($_POST['departmentId'] ?? []))));
+
                 // bind Post Data into one array
                 $values = [
                     'name' => $_POST['name'],
                     'details' => $_POST['details'],
-                    'clientId' => $_POST['clientId'],
+                    'clientId' => (int) ($selectedClientIds[0] ?? 0),
                     'state' => $_POST['projectState'],
                     'hourBudget' => $_POST['hourBudget'],
                     'dollarBudget' => $_POST['dollarBudget'],
@@ -240,15 +249,22 @@ class ShowProject extends Controller
                     'parent' => $_POST['parent'] ?? '',
                     'start' => isset($_POST['start']) && dtHelper()->isValidDateString($_POST['start']) ? dtHelper()->parseUserDateTime($_POST['start'])->formatDateTimeForDb() : '',
                     'end' => isset($_POST['end']) && dtHelper()->isValidDateString($_POST['end']) ? dtHelper()->parseUserDateTime($_POST['end'])->formatDateTimeForDb() : '',
+                    'departmentId' => (int) ($selectedDepartmentIds[0] ?? 0),
                 ];
 
                 if ($values['name'] !== '') {
-                    if ($this->projectRepo->hasTickets($id) && $values['state'] == 1) {
+                    if (count($selectedClientIds) !== 1) {
+                        $this->tpl->setNotification('Select exactly one client.', 'error');
+                    } elseif (count($selectedDepartmentIds) !== 1) {
+                        $this->tpl->setNotification('Select exactly one unit.', 'error');
+                    } elseif ($this->projectRepo->hasTickets($id) && $values['state'] == 1) {
                         $this->tpl->setNotification($this->language->__('notification.project_has_tickets'), 'error');
                     } else {
                         $this->projectRepo->editProject($values, $id);
+                        $this->organizationRepo->linkProjectDepartment($id, (int) $values['departmentId']);
 
                         $project['assignedUsers'] = $this->projectRepo->getUsersAssignedToProject($id, true);
+                        $project['departmentId'] = (int) $values['departmentId'];
 
                         $this->tpl->setNotification($this->language->__('notification.project_saved'), 'success');
 
@@ -291,6 +307,7 @@ class ShowProject extends Controller
             // Assign vars
             $this->tpl->assign('availableUsers', $this->userRepo->getAll());
             $this->tpl->assign('clients', $this->clientsRepo->getAll());
+            $this->tpl->assign('availableDepartments', $this->organizationRepo->getDepartments());
 
             $this->tpl->assign('todoStatus', $this->ticketService->getStatusLabels());
 

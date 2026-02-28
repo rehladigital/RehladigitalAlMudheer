@@ -70,6 +70,22 @@ class Organization
         return $filtered;
     }
 
+    public function roleNameExists(string $name): bool
+    {
+        if (! Schema::hasTable('zp_org_roles')) {
+            return false;
+        }
+
+        $normalized = mb_strtolower(trim($name));
+        if ($normalized === '') {
+            return false;
+        }
+
+        return $this->db->table('zp_org_roles')
+            ->whereRaw('LOWER(TRIM(name)) = ?', [$normalized])
+            ->exists();
+    }
+
     public function getRoleById(int $roleId): ?array
     {
         if ($roleId <= 0 || ! Schema::hasTable('zp_org_roles')) {
@@ -425,6 +441,19 @@ class Organization
             ['projectId' => $projectId],
             ['departmentId' => $departmentId, 'updatedOn' => date('Y-m-d H:i:s')]
         );
+    }
+
+    public function getProjectDepartmentId(int $projectId): int
+    {
+        if (! Schema::hasTable('zp_org_project_departments') || $projectId <= 0) {
+            return 0;
+        }
+
+        $departmentId = $this->db->table('zp_org_project_departments')
+            ->where('projectId', $projectId)
+            ->value('departmentId');
+
+        return (int) ($departmentId ?? 0);
     }
 
     public function getDepartmentsForUser(int $userId): array
