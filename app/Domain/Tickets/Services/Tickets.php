@@ -102,8 +102,9 @@ class Tickets
             }
         }
 
-        if (session()->exists('currentProject')) {
-            $statusLabelsByProject[session('currentProject')] = $this->ticketRepository->getStateLabels(session('currentProject'));
+        $currentProjectId = (int) (session('currentProject') ?? 0);
+        if ($currentProjectId > 0) {
+            $statusLabelsByProject[$currentProjectId] = $this->ticketRepository->getStateLabels($currentProjectId);
         }
 
         // There is a non zero chance that a user has tickets assigned to them without a project assignment.
@@ -1561,9 +1562,10 @@ class Tickets
             }
         }
 
-        if (session()->exists('currentProject')) {
-            $allProjectMilestones = $this->getAllMilestones(['sprint' => '', 'type' => 'milestone', 'currentProject' => session('currentProject')]);
-            $milestones[session('currentProject')] = $allProjectMilestones;
+        $currentProjectId = (int) (session('currentProject') ?? 0);
+        if ($currentProjectId > 0) {
+            $allProjectMilestones = $this->getAllMilestones(['sprint' => '', 'type' => 'milestone', 'currentProject' => $currentProjectId]);
+            $milestones[$currentProjectId] = $allProjectMilestones;
         }
 
         // There is a non zero chance that a user has tickets assigned to them without a project assignment.
@@ -1572,7 +1574,11 @@ class Tickets
 
         foreach ($allTickets as $row) {
             if (! isset($milestones[$row['projectId']])) {
-                $allProjectMilestones = $this->getAllMilestones(['sprint' => '', 'type' => 'milestone', 'currentProject' => session('currentProject')]);
+                $allProjectMilestones = $this->getAllMilestones([
+                    'sprint' => '',
+                    'type' => 'milestone',
+                    'currentProject' => (int) $row['projectId'],
+                ]);
 
                 $milestones[$row['projectId']] = $allProjectMilestones;
             }
@@ -2962,8 +2968,10 @@ class Tickets
         }
 
         // Pagination parameters
-        // $limit = $params['limit'] ?? 20;
-        $limit = null;
+        $limit = isset($params['limit']) ? (int) $params['limit'] : 50;
+        if ($limit <= 0) {
+            $limit = 50;
+        }
         $offset = $params['offset'] ?? 0;
         $group = $params['group'] ?? null; // Specific group to load
 
