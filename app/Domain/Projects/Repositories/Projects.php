@@ -363,6 +363,7 @@ class Projects
                     })
                     ->orWhere(function ($q2) use ($userId, $hasDepartmentTables) {
                         if (! $hasDepartmentTables) {
+                            $q2->whereRaw('1 = 0');
                             return;
                         }
                         $q2->where('project.psettings', 'departments')
@@ -385,6 +386,7 @@ class Projects
                     })
                     ->orWhere(function ($q2) use ($userId, $hasDepartmentTables) {
                         if (! $hasDepartmentTables) {
+                            $q2->whereRaw('1 = 0');
                             return;
                         }
                         $q2->where('project.psettings', 'departments')
@@ -491,6 +493,7 @@ class Projects
                     })
                     ->orWhere(function ($q2) use ($userId, $hasDepartmentTables) {
                         if (! $hasDepartmentTables) {
+                            $q2->whereRaw('1 = 0');
                             return;
                         }
                         $q2->where('project.psettings', 'departments')

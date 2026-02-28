@@ -318,6 +318,7 @@ class Tickets
                     })
                     ->orWhere(function ($q2) use ($id, $hasDepartmentTables) {
                         if (! $hasDepartmentTables) {
+                            $q2->whereRaw('1 = 0');
                             return;
                         }
                         $q2->where('project.psettings', 'departments')
@@ -489,6 +490,7 @@ class Tickets
                     })
                     ->orWhere(function ($q2) use ($userId, $hasDepartmentTables) {
                         if (! $hasDepartmentTables) {
+                            $q2->whereRaw('1 = 0');
                             return;
                         }
                         $q2->where('zp_projects.psettings', 'departments')
@@ -726,6 +728,7 @@ class Tickets
                     })
                     ->orWhere(function ($q2) use ($requestorId, $hasDepartmentTables) {
                         if (! $hasDepartmentTables) {
+                            $q2->whereRaw('1 = 0');
                             return;
                         }
                         $q2->where('zp_projects.psettings', 'departments')
@@ -809,6 +812,7 @@ class Tickets
                     })
                     ->orWhere(function ($q2) use ($activeUserId, $hasDepartmentTables) {
                         if (! $hasDepartmentTables) {
+                            $q2->whereRaw('1 = 0');
                             return;
                         }
                         $q2->where('zp_projects.psettings', 'departments')
@@ -1170,6 +1174,7 @@ class Tickets
                     })
                     ->orWhere(function ($q2) use ($userId, $hasDepartmentTables) {
                         if (! $hasDepartmentTables) {
+                            $q2->whereRaw('1 = 0');
                             return;
                         }
                         $q2->where('zp_projects.psettings', 'departments')

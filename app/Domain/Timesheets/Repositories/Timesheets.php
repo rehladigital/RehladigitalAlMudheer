@@ -227,6 +227,7 @@ class Timesheets extends Repository
                     })
                     ->orWhere(function ($q2) use ($userId, $hasDepartmentTables) {
                         if (! $hasDepartmentTables) {
+                            $q2->whereRaw('1 = 0');
                             return;
                         }
                         $q2->where('zp_projects.psettings', 'departments')
