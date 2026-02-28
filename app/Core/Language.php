@@ -198,17 +198,24 @@ class Language
     public function readIni(): array
     {
         if (@Cache::store('installation')->has('languages.lang_'.$this->language)) {
-            $this->ini_array = self::dispatchFilter(
+            $cachedLanguage = Cache::store('installation')->get('languages.lang_'.$this->language);
+            if (! is_array($cachedLanguage)) {
+                // Guard against stale/corrupt cache values that break strict typed assignment.
+                Cache::store('installation')->forget('languages.lang_'.$this->language);
+            } else {
+                $filteredLanguage = self::dispatchFilter(
                 'language_resources',
-                Cache::store('installation')->get('languages.lang_'.$this->language),
+                $cachedLanguage,
                 [
                     'language' => $this->language,
                 ]
-            ) ?? Cache::store('installation')->get('languages.lang_'.$this->language);
+                );
+                $this->ini_array = is_array($filteredLanguage) ? $filteredLanguage : $cachedLanguage;
 
-            Cache::store('installation')->set('languages.lang_'.$this->language, $this->ini_array);
+                Cache::store('installation')->set('languages.lang_'.$this->language, $this->ini_array);
 
-            return $this->ini_array;
+                return $this->ini_array;
+            }
         }
 
         // Default to english US
