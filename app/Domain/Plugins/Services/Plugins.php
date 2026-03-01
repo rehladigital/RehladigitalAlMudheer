@@ -76,7 +76,7 @@ class Plugins
     protected function httpClient()
     {
 
-        return Http::withoutVerifying()->timeout($this->timeout);
+        return Http::timeout($this->timeout);
 
     }
 

@@ -1,3 +1,17 @@
+# Version: 3.7.3 (Al Mudheer Security Hardening)
+
+## Security Fixes
+- Added strict OIDC `state` handling: state is generated per login request, stored in session, and validated with one-time comparison during callback.
+- Re-enabled TLS certificate verification for OIDC discovery/token/JWKS requests by removing insecure `withoutVerifying()` usage.
+- Re-enabled TLS certificate verification in plugin marketplace HTTP client behavior (timeout preserved).
+- Fixed malformed security headers array entry so `Referrer-Policy: same-origin` is correctly emitted.
+
+## Operational Notes
+- Local application 2FA behavior remains unchanged for this release; Entra handles MFA policy externally.
+- Scope is focused on authentication and transport-security hardening with no functional UI workflow changes.
+
+---
+
 # Version: 3.7.2 (Al Mudheer Hotfix Rollup)
 
 ## Complete Commit Rollup (most recent first)
