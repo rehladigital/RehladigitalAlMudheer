@@ -175,13 +175,14 @@ class Oidc
     {
 
         if ($this->getAuthUrl()) {
+            $state = $this->generateState();
 
             return $this->getAuthUrl().'?'.http_build_query([
                 'client_id' => $this->clientId,
                 'redirect_uri' => $this->buildRedirectUrl(),
                 'response_type' => 'code',
                 'scope' => $this->scopes,
-                'state' => $this->generateState(),
+                'state' => $state,
             ]);
         }
 
@@ -592,7 +593,7 @@ class Oidc
      */
     private function requestTokens(string $code): array|string
     {
-        $httpClient = Http::withoutVerifying();
+        $httpClient = Http::timeout(20);
 
         // Add proper client authentication headers
         $response = $httpClient->asForm()->post($this->getTokenUrl(), [
@@ -701,7 +702,7 @@ class Oidc
             return openssl_pkey_get_public(file_get_contents($this->certificateFile));
         }
 
-        $httpClient = Http::withoutVerifying();
+        $httpClient = Http::timeout(20);
         // AUTH HEADER?
         $response = $httpClient->get($this->getJwksUrl()); // https://cloud.lukas-sieper.de/apps/oidc/jwks
         $keys = json_decode($response->getBody()->getContents(), true);
@@ -800,7 +801,7 @@ class Oidc
             return true;
         }
 
-        $httpClient = Http::withoutVerifying();
+        $httpClient = Http::timeout(20);
         try {
             // $uri = strlen() ? $this->autoDiscoverUrl : $this->providerUrl;
             $uri = empty($this->autoDiscoverUrl) ? $this->providerUrl : $this->autoDiscoverUrl;
@@ -874,13 +875,19 @@ class Oidc
      */
     private function generateState(): string
     {
-        return bin2hex(random_bytes(16));
+        $state = bin2hex(random_bytes(32));
+        session()->put('oidc.auth_state', $state);
+
+        return $state;
     }
 
     private function verifyState(string $state): bool
     {
-        // TODO
-        return true;
+        $expectedState = (string) session()->pull('oidc.auth_state', '');
+
+        return $expectedState !== ''
+            && $state !== ''
+            && hash_equals($expectedState, $state);
     }
 
     private function encodeBase64Url(string $value): string
