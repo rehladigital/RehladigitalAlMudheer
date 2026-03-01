@@ -51,15 +51,7 @@ class Login extends Controller
         $redirectUrl = BASE_URL.'/dashboard/home';
 
         if (isset($_GET['redirect']) && trim($_GET['redirect']) !== '' && trim($_GET['redirect']) !== '/') {
-            $url = urldecode($_GET['redirect']);
-
-            // Check for open redirects, don't allow redirects to external sites.
-            if (
-                filter_var($url, FILTER_VALIDATE_URL) === false &&
-                ! in_array($url, ['/auth/logout'])
-            ) {
-                $redirectUrl = BASE_URL.'/'.$url;
-            }
+            $redirectUrl = $this->sanitizeRedirectUrl((string) urldecode((string) $_GET['redirect']));
         }
 
         if ($this->config->useLdap) {
@@ -107,9 +99,9 @@ class Login extends Controller
     {
         if (isset($_POST['username']) === true && isset($_POST['password']) === true) {
             if (isset($_POST['redirectUrl'])) {
-                $redirectUrl = urldecode(filter_var($_POST['redirectUrl'], FILTER_SANITIZE_URL));
+                $redirectUrl = $this->sanitizeRedirectUrl((string) urldecode((string) filter_var($_POST['redirectUrl'], FILTER_SANITIZE_URL)));
             } else {
-                $redirectUrl = '';
+                $redirectUrl = BASE_URL.'/dashboard/home';
             }
 
             $username = trim($_POST['username']);
@@ -146,5 +138,46 @@ class Login extends Controller
 
             return FrontcontrollerCore::redirect(BASE_URL.'/auth/login');
         }
+    }
+
+    private function sanitizeRedirectUrl(string $url): string
+    {
+        $fallback = BASE_URL.'/dashboard/home';
+        $url = trim($url);
+        if ($url === '' || $url === '/') {
+            return $fallback;
+        }
+
+        // Block protocol-relative, javascript/data URLs and control chars.
+        if (
+            str_starts_with($url, '//')
+            || preg_match('/[\x00-\x1F\x7F]/', $url)
+            || preg_match('/^(?:javascript|data|vbscript):/i', $url)
+        ) {
+            return $fallback;
+        }
+
+        $baseParts = parse_url(BASE_URL) ?: [];
+        $baseHost = strtolower((string) ($baseParts['host'] ?? ''));
+        $baseScheme = strtolower((string) ($baseParts['scheme'] ?? 'https'));
+
+        // Absolute URLs are allowed only when they target this same host.
+        if (filter_var($url, FILTER_VALIDATE_URL) !== false) {
+            $parts = parse_url($url) ?: [];
+            $host = strtolower((string) ($parts['host'] ?? ''));
+            $scheme = strtolower((string) ($parts['scheme'] ?? ''));
+            if ($host === '' || $host !== $baseHost || ! in_array($scheme, ['http', 'https'], true)) {
+                return $fallback;
+            }
+
+            return $url;
+        }
+
+        // Only allow app-relative paths.
+        if (! str_starts_with($url, '/')) {
+            $url = '/'.$url;
+        }
+
+        return BASE_URL.$url;
     }
 }
